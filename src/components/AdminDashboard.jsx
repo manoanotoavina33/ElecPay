@@ -11,234 +11,234 @@ import {
 } from "lucide-react";
 import { db } from "../config/firebase";
 import { Badge, Spinner } from "./Common";
-import { CURRENT_MONTH, fmt } from "../utils/helpers";
+import { CURRENT_MONTH, fmt, getRecentMonths } from "../utils/helpers";
 
 /* ─────────────────────────────────────────────
    STYLES LOCAUX (indépendants du thème global)
 ───────────────────────────────────────────── */
-const A = {
+﻿const A = {
   /* Layout */
-  appWrap:  { display:"flex", minHeight:"100vh", fontFamily:"'Segoe UI',system-ui,sans-serif", background:"#f1f5f9" },
+  appWrap:  { display:"flex", minHeight:"100vh", fontFamily:"Inter, system-ui, sans-serif", background:"#fff", color:"#000" },
   sidebar:  {
-    width:220, flexShrink:0, background:"#fff",
-    borderRight:"1px solid #e2e8f0",
+    width:240, flexShrink:0, background:"#fff",
+    borderRight:"1px solid #eaeaea",
     display:"flex", flexDirection:"column",
     position:"sticky", top:0, height:"100vh", overflowY:"auto",
   },
   main: { flex:1, display:"flex", flexDirection:"column", minWidth:0, overflowX:"hidden" },
 
   /* Sidebar */
-  sidebarTop: { padding:"22px 18px 14px", borderBottom:"1px solid #f1f5f9" },
-  sidebarBrand: { display:"flex", alignItems:"center", gap:10 },
+  sidebarTop: { padding:"32px 24px" },
+  sidebarBrand: { display:"flex", alignItems:"center", gap:12 },
   sidebarIcon: {
-    width:36, height:36, borderRadius:10,
-    background:"linear-gradient(135deg,#4f46e5,#7c3aed)",
+    width:32, height:32, borderRadius:6,
+    background:"#000",
     display:"flex", alignItems:"center", justifyContent:"center",
-    boxShadow:"0 4px 12px rgba(99,102,241,0.35)",
   },
-  sidebarName: { fontSize:16, fontWeight:900, color:"#0f172a", letterSpacing:-0.5 },
-  sidebarSub:  { fontSize:10, color:"#94a3b8", fontWeight:600, textTransform:"uppercase", letterSpacing:.6 },
-  sidebarSection: { fontSize:10, fontWeight:700, color:"#cbd5e1", letterSpacing:.8, textTransform:"uppercase", padding:"18px 18px 6px" },
+  sidebarName: { fontSize:18, fontWeight:700, color:"#000", letterSpacing:"-0.02em" },
+  sidebarSub:  { display:"none" },   
+  sidebarSection: { fontSize:11, fontWeight:500, color:"#888", textTransform:"uppercase", letterSpacing:"0.05em", padding:"24px 24px 8px" },
   navItem: {
     display:"flex", alignItems:"center", gap:10,
-    padding:"9px 14px", margin:"1px 8px", borderRadius:9,
+    padding:"8px 12px", margin:"0 12px 2px", borderRadius:6,
     border:"none", background:"transparent",
-    color:"#64748b", cursor:"pointer", fontSize:13.5, fontWeight:500,
-    textAlign:"left", width:"calc(100% - 16px)", transition:"all .15s",
+    color:"#666", cursor:"pointer", fontSize:14, fontWeight:500,
+    textAlign:"left", width:"calc(100% - 24px)", transition:"all .15s",
   },
-  navItemActive: { background:"#eef2ff", color:"#4f46e5", fontWeight:700 },
+  navItemActive: { background:"#fafafa", color:"#000", fontWeight:600, boxShadow:"0 0 0 1px #eaeaea" },
   navBadge: {
-    background:"#fee2e2", color:"#b91c1c",
-    fontSize:10, fontWeight:800, padding:"2px 7px", borderRadius:20, marginLeft:"auto",
+    background:"#000", color:"#fff",
+    fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:99, marginLeft:"auto",
   },
-  sidebarFooter: { padding:"14px 12px", borderTop:"1px solid #f1f5f9", marginTop:"auto" },
+  sidebarFooter: { padding:"20px 12px", borderTop:"1px solid #eaeaea", marginTop:"auto" },
   userBlock: {
     display:"flex", alignItems:"center", gap:10,
-    padding:"10px 12px", borderRadius:10,
-    background:"#f8fafc", marginBottom:8,
+    padding:"8px 12px", borderRadius:6,
+    background:"transparent", marginBottom:12,
   },
   userAvatar: {
-    width:34, height:34, borderRadius:9, flexShrink:0,
-    background:"linear-gradient(135deg,#f59e0b,#d97706)",
+    width:32, height:32, borderRadius:"50%", flexShrink:0,
+    background:"#000", border:"1px solid #eaeaea",
     display:"flex", alignItems:"center", justifyContent:"center",
   },
   logoutBtn: {
-    display:"flex", alignItems:"center", justifyContent:"center", gap:7,
-    width:"100%", padding:"9px 0", borderRadius:9,
-    border:"1px solid #fee2e2", background:"#fff5f5",
-    color:"#ef4444", fontSize:13, fontWeight:600, cursor:"pointer",
+    display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+    width:"100%", padding:"8px 12px", borderRadius:6,
+    border:"1px solid #eaeaea", background:"#fff",
+    color:"#666", fontSize:14, fontWeight:500, cursor:"pointer", transition:"all 0.2s",
   },
 
   /* Header */
   header: {
-    padding:"16px 28px", background:"#fff",
-    borderBottom:"1px solid #e2e8f0",
+    padding:"0 32px", height:64, background:"#fff",
+    borderBottom:"1px solid #eaeaea",
     display:"flex", alignItems:"center", justifyContent:"space-between",
     position:"sticky", top:0, zIndex:50,
   },
-  pageTitle: { margin:0, fontSize:22, fontWeight:800, color:"#0f172a", letterSpacing:-0.5 },
-  pageSub:   { margin:"2px 0 0", fontSize:12, color:"#94a3b8" },
-  headerRight: { display:"flex", alignItems:"center", gap:8 },
+  pageTitle: { margin:0, fontSize:24, fontWeight:700, color:"#000", letterSpacing:"-0.03em" },
+  pageSub:   { margin:"4px 0 0", fontSize:14, color:"#888" },
+  headerRight: { display:"flex", alignItems:"center", gap:12 },
   refreshBtn: {
-    display:"flex", alignItems:"center", gap:6,
-    padding:"8px 14px", borderRadius:9,
-    border:"1px solid #e2e8f0", background:"#fff",
-    color:"#64748b", fontSize:13, fontWeight:600, cursor:"pointer",
+    display:"flex", alignItems:"center", gap:8,
+    padding:"8px 16px", borderRadius:6,
+    border:"1px solid #eaeaea", background:"#fff",
+    color:"#000", fontSize:14, fontWeight:500, cursor:"pointer",
   },
   adminPill: {
     display:"flex", alignItems:"center", gap:6,
-    padding:"7px 14px", borderRadius:20,
-    background:"#ede9fe", color:"#5b21b6", fontSize:12, fontWeight:700,
+    padding:"4px 12px", borderRadius:99,
+    background:"#fafafa", border:"1px solid #eaeaea", color:"#000", fontSize:12, fontWeight:500,
   },
 
   /* Content */
-  content: { flex:1, padding:"24px 28px" },
+  content: { flex:1, padding:"40px 32px", maxWidth:1200, margin:"0 auto", width:"100%", boxSizing:"border-box" },
 
-  /* ── STATS GRID ── 4 colonnes sur desktop */
+  /* STATS GRID */
   statsRow: {
     display:"grid",
     gridTemplateColumns:"repeat(4, 1fr)",
-    gap:16, marginBottom:20,
+    gap:24, marginBottom:40,
   },
   statCard: {
-    background:"#fff", borderRadius:14,
-    padding:"18px 20px",
-    boxShadow:"0 1px 3px rgba(0,0,0,0.06)",
-    border:"1px solid #f1f5f9",
-    display:"flex", flexDirection:"column", gap:10,
+    background:"#fff", borderRadius:8,
+    padding:"24px",
+    border:"1px solid #eaeaea",
+    display:"flex", flexDirection:"column", gap:12,
   },
   statCardTop: { display:"flex", alignItems:"center", justifyContent:"space-between" },
-  statIconWrap: { width:40, height:40, borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center" },
-  statVal:   { fontSize:28, fontWeight:900, lineHeight:1, letterSpacing:-1 },
-  statLabel: { fontSize:12, color:"#94a3b8", fontWeight:500, marginTop:2 },
+  statIconWrap: { width:32, height:32, borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", background:"#fafafa", border:"1px solid #eaeaea" },
+  statVal:   { fontSize:32, fontWeight:700, lineHeight:1, letterSpacing:"-0.04em", color:"#000" },
+  statLabel: { fontSize:14, color:"#888", fontWeight:500, marginTop:4 },
 
-  /* ── SECTION ROW (progress + alertes) ── */
-  sectionRow: { display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:20 },
+  /* SECTION ROW */
+  sectionRow: { display:"grid", gridTemplateColumns:"1fr 1fr", gap:24, marginBottom:32 },
   sectionCard: {
-    background:"#fff", borderRadius:14, padding:"20px 22px",
-    boxShadow:"0 1px 3px rgba(0,0,0,0.06)", border:"1px solid #f1f5f9",
+    background:"#fff", borderRadius:8, padding:"24px",
+    border:"1px solid #eaeaea",
   },
 
   /* Progress bar */
-  progressWrap: { height:8, borderRadius:99, background:"#e2e8f0", overflow:"hidden", margin:"10px 0 8px" },
+  progressWrap: { height:8, borderRadius:99, background:"#eaeaea", overflow:"hidden", margin:"16px 0 8px" },    
 
   /* Table card */
   tableCard: {
-    background:"#fff", borderRadius:14, overflow:"hidden",
-    boxShadow:"0 1px 3px rgba(0,0,0,0.06)", border:"1px solid #f1f5f9",
-    marginBottom:20,
+    background:"#fff", borderRadius:8, overflow:"hidden",
+    border:"1px solid #eaeaea",
+    marginBottom:32,
   },
   tableHeader: {
     display:"flex", alignItems:"center", justifyContent:"space-between",
-    padding:"16px 20px", borderBottom:"1px solid #f8fafc",
+    padding:"20px 24px", borderBottom:"1px solid #eaeaea",
   },
-  tableTitle: { margin:0, fontSize:15, fontWeight:700, color:"#0f172a" },
+  tableTitle: { margin:0, fontSize:18, fontWeight:600, color:"#000" },
   tableHead: {
-    display:"grid", background:"#f8fafc",
-    padding:"10px 20px", gap:10,
-    fontSize:11, fontWeight:700, color:"#94a3b8",
-    letterSpacing:.6, textTransform:"uppercase",
+    display:"grid", background:"#fafafa",
+    padding:"12px 24px", gap:10,
+    fontSize:12, fontWeight:500, color:"#888",
+    letterSpacing:"0.05em", textTransform:"uppercase",
   },
   tableRow: {
-    display:"grid", padding:"13px 20px", gap:10,
-    borderTop:"1px solid #f8fafc", fontSize:13.5,
-    alignItems:"center",
+    display:"grid", padding:"16px 24px", gap:10,
+    borderTop:"1px solid #eaeaea", fontSize:14,
+    alignItems:"center", color:"#444",
   },
 
   /* Buttons */
   btnPrimary: {
-    display:"inline-flex", alignItems:"center", gap:7,
-    padding:"9px 18px", borderRadius:9, border:"none",
-    background:"linear-gradient(135deg,#4f46e5,#7c3aed)",
-    color:"#fff", fontWeight:700, fontSize:13.5, cursor:"pointer",
-    boxShadow:"0 2px 8px rgba(99,102,241,0.3)",
+    display:"inline-flex", alignItems:"center", gap:8,
+    padding:"10px 24px", borderRadius:6, border:"none",
+    background:"#000",
+    color:"#fff", fontWeight:500, fontSize:14, cursor:"pointer",
+    transition:"all 0.2s",
   },
   btnSmallGreen: {
     display:"inline-flex", alignItems:"center", gap:5,
-    padding:"6px 12px", borderRadius:7, border:"none",
-    background:"#dcfce7", color:"#15803d", fontWeight:700, fontSize:12, cursor:"pointer",
+    padding:"6px 12px", borderRadius:6, border:"1px solid #b3e0ff",
+    background:"#e6f6ff", color:"#0070f3", fontWeight:500, fontSize:12, cursor:"pointer",
   },
   btnSmallBlue: {
     display:"inline-flex", alignItems:"center", gap:5,
-    padding:"6px 12px", borderRadius:7, border:"none",
-    background:"#eef2ff", color:"#4f46e5", fontWeight:700, fontSize:12, cursor:"pointer",
+    padding:"6px 12px", borderRadius:6, border:"1px solid #eaeaea",
+    background:"#fafafa", color:"#000", fontWeight:500, fontSize:12, cursor:"pointer",
   },
   btnSmallRed: {
     display:"inline-flex", alignItems:"center", gap:5,
-    padding:"6px 12px", borderRadius:7, border:"none",
-    background:"#fee2e2", color:"#b91c1c", fontWeight:700, fontSize:12, cursor:"pointer",
+    padding:"6px 12px", borderRadius:6, border:"1px solid #ffd1d1",
+    background:"#fff0f0", color:"#ee0000", fontWeight:500, fontSize:12, cursor:"pointer",
   },
   btnSmallGray: {
     display:"inline-flex", alignItems:"center", gap:5,
-    padding:"7px 13px", borderRadius:8, border:"1px solid #e2e8f0",
-    background:"#fff", color:"#64748b", fontWeight:600, fontSize:13, cursor:"pointer",
+    padding:"6px 12px", borderRadius:6, border:"1px solid #eaeaea",
+    background:"#fff", color:"#666", fontWeight:500, fontSize:12, cursor:"pointer",
   },
   btnOutline: {
-    display:"inline-flex", alignItems:"center", gap:7,
-    padding:"9px 18px", borderRadius:9,
-    border:"1.5px solid #e2e8f0", background:"#fff",
-    color:"#64748b", fontWeight:600, fontSize:13.5, cursor:"pointer",
+    display:"inline-flex", alignItems:"center", gap:8,
+    padding:"10px 24px", borderRadius:6,
+    border:"1px solid #eaeaea", background:"#fff",
+    color:"#000", fontWeight:500, fontSize:14, cursor:"pointer",
   },
   btnViewAll: {
     display:"inline-flex", alignItems:"center", gap:5,
-    padding:"7px 14px", borderRadius:8,
-    border:"1px solid #e2e8f0", background:"#f8fafc",
-    color:"#4f46e5", fontWeight:700, fontSize:12.5, cursor:"pointer",
+    padding:"6px 12px", borderRadius:6,
+    border:"1px solid #eaeaea", background:"#fff",
+    color:"#000", fontWeight:500, fontSize:12, cursor:"pointer",
   },
 
   /* Avatar */
   avatar: {
-    width:32, height:32, borderRadius:9,
-    background:"linear-gradient(135deg,#4f46e5,#7c3aed)",
+    width:32, height:32, borderRadius:"50%",
+    background:"#000",
     display:"flex", alignItems:"center", justifyContent:"center",
-    color:"#fff", fontWeight:800, fontSize:13, flexShrink:0,
+    color:"#fff", fontWeight:600, fontSize:12, flexShrink:0,
+    border:"1px solid #eaeaea",
   },
 
   /* Search */
   searchWrap: { position:"relative" },
-  searchIcon: { position:"absolute", left:11, top:"50%", transform:"translateY(-50%)", color:"#94a3b8", pointerEvents:"none" },
+  searchIcon: { position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", color:"#888", pointerEvents:"none" },
   searchInput: {
-    padding:"9px 12px 9px 34px", borderRadius:9,
-    border:"1.5px solid #e2e8f0", background:"#f8fafc",
-    fontSize:13.5, color:"#0f172a", outline:"none",
+    padding:"10px 12px 10px 36px", borderRadius:6,
+    border:"1px solid #eaeaea", background:"#fff",
+    fontSize:14, color:"#000", outline:"none",
     transition:"border-color .2s",
   },
 
   /* Modal */
-  overlay: { position:"fixed", inset:0, background:"rgba(0,0,0,0.4)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:200 },
+  overlay: { position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:200 },
   modalCard: {
-    background:"#fff", borderRadius:18, padding:"28px 30px",
-    width:420, boxShadow:"0 24px 60px rgba(0,0,0,0.15)",
-    maxHeight:"90vh", overflowY:"auto",
+    background:"#fff", borderRadius:12, padding:"32px",
+    width:480, boxShadow:"0 30px 60px rgba(0,0,0,0.12)",
+    maxHeight:"90vh", overflowY:"auto", border:"1px solid #eaeaea",
   },
-  modalTitle: { margin:0, fontSize:18, fontWeight:800, color:"#0f172a" },
-  label: { display:"block", fontSize:11.5, fontWeight:700, color:"#64748b", marginBottom:6, textTransform:"uppercase", letterSpacing:.5 },
+  modalTitle: { margin:0, fontSize:20, fontWeight:700, color:"#000", letterSpacing:"-0.02em" },
+  label: { display:"block", fontSize:12, fontWeight:500, color:"#888", marginBottom:8, textTransform:"uppercase", letterSpacing:"0.05em" },
   modalInput: {
-    width:"100%", padding:"10px 12px 10px 38px",
-    borderRadius:9, border:"1.5px solid #e2e8f0",
-    fontSize:13.5, color:"#0f172a", outline:"none",
-    boxSizing:"border-box", background:"#f8fafc",
+    width:"100%", padding:"10px 12px 10px 36px",
+    borderRadius:6, border:"1px solid #eaeaea",
+    fontSize:14, color:"#000", outline:"none",
+    boxSizing:"border-box", background:"#fff",
     transition:"border-color .15s",
   },
 
   /* Notif */
-  notifCard: { background:"#fff", borderRadius:16, padding:"28px", boxShadow:"0 1px 3px rgba(0,0,0,0.06)", border:"1px solid #f1f5f9" },
-  notifIconWrap: { width:60, height:60, borderRadius:16, background:"#eef2ff", border:"1px solid #e0e7ff", display:"flex", alignItems:"center", justifyContent:"center" },
-  notifRow: { display:"flex", justifyContent:"space-between", alignItems:"center", padding:"12px 14px", background:"#f8fafc", borderRadius:10, marginBottom:8 },
-  notifSuccess: { display:"flex", alignItems:"center", gap:8, background:"#dcfce7", color:"#15803d", borderRadius:10, padding:"12px 16px", fontWeight:600, fontSize:13, marginTop:12 },
+  notifCard: { background:"#fff", borderRadius:8, padding:"32px", border:"1px solid #eaeaea" },
+  notifIconWrap: { width:64, height:64, borderRadius:12, background:"#fafafa", border:"1px solid #eaeaea", display:"flex", alignItems:"center", justifyContent:"center" },
+  notifRow: { display:"flex", justifyContent:"space-between", alignItems:"center", padding:"12px 16px", background:"#fafafa", borderRadius:8, marginBottom:8, border:"1px solid #eaeaea" },
+  notifSuccess: { display:"flex", alignItems:"center", gap:8, background:"#e6f6ff", color:"#0070f3", borderRadius:8, padding:"12px 16px", fontWeight:600, fontSize:14, marginTop:16 },
 
   /* Alert */
-  alertWarn: { display:"flex", alignItems:"flex-start", gap:10, background:"#fffbeb", border:"1px solid #fde68a", borderRadius:10, padding:"12px 16px", marginBottom:16 },
+  alertWarn: { display:"flex", alignItems:"flex-start", gap:12, background:"#fffbeb", border:"1px solid #fcd34d", borderRadius:8, padding:"16px", marginBottom:24 },
 
   /* Empty */
-  emptyState: { display:"flex", flexDirection:"column", alignItems:"center", padding:"48px 0", color:"#94a3b8", gap:8 },
+  emptyState: { display:"flex", flexDirection:"column", alignItems:"center", padding:"64px 0", color:"#888", gap:12 },
 
   /* Mobile cards */
-  mobCard: { background:"#fff", borderRadius:12, padding:"14px 16px", marginBottom:10, boxShadow:"0 1px 3px rgba(0,0,0,0.06)", border:"1px solid #f1f5f9" },
-  mobRow: { display:"flex", justifyContent:"space-between", alignItems:"center", padding:"5px 0", borderBottom:"1px solid #f8fafc" },
-  mobLabel: { fontSize:11.5, color:"#94a3b8", fontWeight:600 },
-  mobVal: { fontSize:13, color:"#334155", fontWeight:500 },
+  mobCard: { background:"#fff", borderRadius:8, padding:"16px", marginBottom:12, border:"1px solid #eaeaea" },
+  mobRow: { display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:"1px solid #fafafa" },
+  mobLabel: { fontSize:12, color:"#888", fontWeight:500 },
+  mobVal: { fontSize:14, color:"#000", fontWeight:500 },
 };
+
 
 export default function AdminDashboard({ onLogout }) {
   const [tenants, setTenants]       = useState([]);
@@ -249,7 +249,7 @@ export default function AdminDashboard({ onLogout }) {
   const [loading, setLoading]       = useState(true);
   const [notifSent, setNotifSent]   = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [search, setSearch]         = useState("");
+  const [search, setSearch]         = useState(""); const [selectedMonth, setSelectedMonth] = useState(CURRENT_MONTH);
   const [isMobile, setIsMobile]     = useState(window.innerWidth <= 768);
 
   useEffect(() => {
@@ -273,16 +273,22 @@ export default function AdminDashboard({ onLogout }) {
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
+  const processedTenants = tenants.map(t => ({
+    ...t,
+    statut: payments.some(p => p.clientId === t.id && p.mois === selectedMonth) 
+            ? "payé" 
+            : (t.statut === "payé" ? "non payé" : t.statut)
+  }));
   const stats = {
-    total:    tenants.length,
-    payes:    tenants.filter(t => t.statut === "payé").length,
-    nonPayes: tenants.filter(t => t.statut === "non payé").length,
-    retards:  tenants.filter(t => t.statut === "retard").length,
-    revenus:  payments.filter(p => p.mois === CURRENT_MONTH).reduce((a, p) => a + (p.montant || 0), 0),
-    taux:     tenants.length ? Math.round((tenants.filter(t => t.statut === "payé").length / tenants.length) * 100) : 0,
+    total:    processedTenants.length,
+    payes:    processedTenants.filter(t => t.statut === "payé").length,
+    nonPayes: processedTenants.filter(t => t.statut === "non payé").length,
+    retards:  processedTenants.filter(t => t.statut === "retard").length,
+    revenus:  payments.filter(p => p.mois === selectedMonth).reduce((a, p) => a + (p.montant || 0), 0),
+    taux:     processedTenants.length ? Math.round((processedTenants.filter(t => t.statut === "payé").length / processedTenants.length) * 100) : 0,
   };
 
-  const filteredTenants = tenants.filter(t =>
+    const filteredTenants = processedTenants.filter(t =>
     t.nom?.toLowerCase().includes(search.toLowerCase()) ||
     t.logement?.toLowerCase().includes(search.toLowerCase())
   );
@@ -294,7 +300,7 @@ export default function AdminDashboard({ onLogout }) {
     if (!form.nom || !form.logement || !form.montant) return;
     try {
       if (form.id) { const { id, ...data } = form; await updateDoc(doc(db, "clients", id), data); }
-      else await addDoc(collection(db, "clients"), { ...form, statut:"non payé", datePaiement:null, mois:CURRENT_MONTH });
+      else await addDoc(collection(db, "clients"), { ...form, statut:"non payé", datePaiement:null, mois:selectedMonth });
       await loadAll();
     } catch (e) { console.error(e); }
     closeModal();
@@ -315,7 +321,7 @@ export default function AdminDashboard({ onLogout }) {
     const tenant = tenants.find(t => t.id === tenantId);
     try {
       await updateDoc(doc(db, "clients", tenantId), { statut:"payé", datePaiement:today });
-      if (tenant) await addDoc(collection(db, "paiements"), { clientId:tenantId, montant:tenant.montant, date:today, mois:CURRENT_MONTH, statut:"payé" });
+      if (tenant) await addDoc(collection(db, "paiements"), { clientId:tenantId, montant:tenant.montant, date:today, mois:selectedMonth, statut:"payé" });
       await loadAll();
     } catch (e) { console.error(e); }
   };
@@ -324,7 +330,7 @@ export default function AdminDashboard({ onLogout }) {
     { key:"dashboard", Icon:LayoutDashboard, label:"Tableau de bord" },
     { key:"tenants",   Icon:Users,           label:"Locataires" },
     { key:"payments",  Icon:CreditCard,      label:"Paiements" },
-    { key:"notifs",    Icon:Bell,            label:"Notifications", badge: tenants.filter(t => t.statut !== "payé").length || null },
+    { key:"notifs",    Icon:Bell,            label:"Notifications", badge: processedTenants.filter(t => t.statut !== "payé").length || null },
   ];
 
   /* ── Sidebar partagée ── */
@@ -346,7 +352,7 @@ export default function AdminDashboard({ onLogout }) {
             style={{ ...A.navItem, ...(tab===key ? A.navItemActive : {}) }}>
             <Icon size={16} strokeWidth={tab===key ? 2.5 : 2}/>
             <span style={{ flex:1 }}>{label}</span>
-            {badge ? <span style={A.navBadge}>{badge}</span> : tab===key && <div style={{ width:6, height:6, borderRadius:"50%", background:"#4f46e5", marginLeft:"auto" }}/>}
+            {badge ? <span style={A.navBadge}>{badge}</span> : tab===key && <div style={{ width:6, height:6, borderRadius:"50%", background:"#000", marginLeft:"auto" }}/>}
           </button>
         ))}
       </nav>
@@ -446,7 +452,7 @@ export default function AdminDashboard({ onLogout }) {
             )}
             <div>
               <h2 style={{ ...A.pageTitle, fontSize: isMobile ? 17 : 22 }}>{currentNav?.label}</h2>
-              <p style={A.pageSub}>{CURRENT_MONTH}</p>
+              <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} style={{ ...A.pageSub, border: "none", background: "transparent", cursor: "pointer", fontWeight: 600, color: "#4f46e5", outline: "none" }}>{getRecentMonths().map(m => <option key={m} value={m}>{m}</option>)}</select>
             </div>
           </div>
           <div style={A.headerRight}>
@@ -512,7 +518,7 @@ export default function AdminDashboard({ onLogout }) {
                           <span style={{ fontSize:13, fontWeight:700, color:"#92400e" }}>Alertes ({stats.nonPayes})</span>
                         </div>
                         <div style={{ display:"flex", flexDirection:"column", gap:6, maxHeight:110, overflowY:"auto" }}>
-                          {tenants.filter(t => t.statut !== "payé").slice(0,5).map(t => (
+                          {processedTenants.filter(t => t.statut !== "payé").slice(0,5).map(t => (
                             <div key={t.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:12 }}>
                               <span style={{ fontWeight:600, color:"#78350f" }}>{t.nom}</span>
                               <Badge statut={t.statut}/>
@@ -526,14 +532,14 @@ export default function AdminDashboard({ onLogout }) {
                   {/* ── Tableau résumé ── */}
                   <div style={A.tableCard}>
                     <div style={A.tableHeader}>
-                      <h3 style={A.tableTitle}>Paiements — {CURRENT_MONTH}</h3>
+                      <h3 style={A.tableTitle}>Paiements — {selectedMonth}</h3>
                       <button onClick={() => setTab("tenants")} style={A.btnViewAll}>
                         Voir tout <ChevronRight size={13}/>
                       </button>
                     </div>
                     {isMobile ? (
                       <div style={{ padding:12 }}>
-                        {tenants.slice(0,5).map(t => <TenantRowCard key={t.id} t={t}/>)}
+                        {processedTenants.slice(0,5).map(t => <TenantRowCard key={t.id} t={t}/>)}
                       </div>
                     ) : (
                       <div style={{ overflowX:"auto" }}>
@@ -541,7 +547,7 @@ export default function AdminDashboard({ onLogout }) {
                           <div style={{ ...A.tableHead, gridTemplateColumns:"2fr 1fr 1fr 1fr 1.5fr" }}>
                             <span>Locataire</span><span>Logement</span><span>Montant</span><span>Statut</span><span>Actions</span>
                           </div>
-                          {tenants.slice(0,5).map(t => (
+                          {processedTenants.slice(0,5).map(t => (
                             <div key={t.id} style={{ ...A.tableRow, gridTemplateColumns:"2fr 1fr 1fr 1fr 1.5fr" }}
                               onMouseEnter={e => e.currentTarget.style.background="#f8fafc"}
                               onMouseLeave={e => e.currentTarget.style.background=""}>
@@ -666,13 +672,13 @@ export default function AdminDashboard({ onLogout }) {
                 <div style={{ maxWidth:520, margin:"0 auto" }}>
                   <div style={{ ...A.notifCard, textAlign:"center" }}>
                     <div style={{ ...A.notifIconWrap, margin:"0 auto 18px" }}>
-                      <Bell size={28} color="#4f46e5"/>
+                      <Bell size={28} color="#000"/>
                     </div>
                     <h3 style={{ fontSize:20, fontWeight:800, color:"#0f172a", margin:"0 0 8px" }}>Rappels de paiement</h3>
                     <p style={{ color:"#64748b", marginBottom:24, fontSize:14, lineHeight:1.6 }}>
-                      Notifier les locataires n'ayant pas encore payé pour <strong style={{ color:"#0f172a" }}>{CURRENT_MONTH}</strong>.
+                      Notifier les locataires n'ayant pas encore payé pour <strong style={{ color:"#0f172a" }}>{selectedMonth}</strong>.
                     </p>
-                    {tenants.filter(t => t.statut !== "payé").length === 0 ? (
+                    {processedTenants.filter(t => t.statut !== "payé").length === 0 ? (
                       <div style={{ padding:"20px 0", color:"#15803d", fontWeight:700 }}>
                         <CheckCircle size={20} style={{ verticalAlign:"middle", marginRight:6 }}/>
                         Tous les locataires ont payé !
@@ -680,7 +686,7 @@ export default function AdminDashboard({ onLogout }) {
                     ) : (
                       <>
                         <div style={{ marginBottom:20, textAlign:"left" }}>
-                          {tenants.filter(t => t.statut !== "payé").map(t => (
+                          {processedTenants.filter(t => t.statut !== "payé").map(t => (
                             <div key={t.id} style={A.notifRow}>
                               <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                                 <div style={A.avatar}>{t.nom?.[0]}</div>
