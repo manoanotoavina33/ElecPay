@@ -226,7 +226,7 @@ export default function LoginScreen({ onLogin }) {
                   paddingRight: 46,
                   caretColor: "#fff",
                   WebkitTextSecurity: showPass ? "none" : "disc",
-                  WebkitTextFillColor: focused === "pass" ? "#000000" : "#ffffff", // noir si focus, blanc sinon
+                  WebkitTextFillColor: focused === "pass" ? "#000000" : "#CCFFCC", 
                   ...(focused === "pass" ? S.inputDarkFocus : {}),
                 }}
             />
