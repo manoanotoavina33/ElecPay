@@ -196,7 +196,7 @@ export default function LoginScreen({ onLogin }) {
                   WebkitTextFillColor:"#e2e8f0",
                   ...(focused === "sel" ? S.inputDarkFocus : {}),
                 }}>
-                <option value="">— Sélectionner votre nom —</option>
+                <option value="">Sélectionner votre nom</option>
                 {[...tenants].sort((a, b) => a.nom.localeCompare(b.nom)).map(t => (
                   <option key={t.id} value={t.id}>{t.nom} ({t.logement})</option>
                 ))}
@@ -213,7 +213,7 @@ export default function LoginScreen({ onLogin }) {
             <input
                 ref={passRef}
                 type="text"
-                placeholder={role === "admin" ? "Code d'accès" : "Mot de passe (optionnel)"}
+                placeholder={role === "admin" ? "Code d'accès" : "Mot de passe"}
                 value={pass}
                 onChange={e => setPass(e.target.value)}
                 onFocus={() => setFocused("pass")}

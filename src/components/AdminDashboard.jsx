@@ -7,7 +7,8 @@ import {
   Zap, LayoutDashboard, Users, CreditCard, Bell, LogOut,
   CheckCircle, XCircle, DollarSign, Plus,
   Pencil, Trash2, Send, ShieldCheck, Home, Phone, Menu, X,
-  Search, RefreshCw, User, AlertTriangle, ChevronRight, Lock, Calendar
+  Search, RefreshCw, User, AlertTriangle, ChevronRight, Lock, Calendar,
+  Eye, EyeOff
 } from "lucide-react";
 import { db } from "../config/firebase";
 import { Badge, Spinner } from "./Common";
@@ -35,9 +36,6 @@ const T = {
   warnSoft:    "rgba(251,191,36,0.1)",
 };
 
-/* ─────────────────────────────────────────────
-   CSS ANIMATIONS — copié du ClientDashboard
-───────────────────────────────────────────── */
 const CSS_ANIM = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
   * { box-sizing: border-box; }
@@ -85,9 +83,6 @@ const CSS_ANIM = `
   }
 `;
 
-/* ─────────────────────────────────────────────
-   STYLES — même structure que ClientDashboard
-───────────────────────────────────────────── */
 const S = {
   appWrap: {
     display:"flex", minHeight:"100vh",
@@ -255,7 +250,6 @@ const S = {
     display:"flex", flexDirection:"column", alignItems:"center", gap:8,
     color:T.text2,
   },
-  /* Buttons */
   btnPrimary: {
     display:"inline-flex", alignItems:"center", gap:7,
     padding:"9px 18px", borderRadius:9, border:"none",
@@ -305,16 +299,14 @@ const S = {
     background:T.warnSoft, border:"1px solid rgba(251,191,36,0.2)",
     marginBottom:14,
   },
-  /* Search */
   searchInput: {
     padding:"9px 12px 9px 34px", borderRadius:9,
     border:`1.5px solid ${T.border}`, background:"rgba(255,255,255,0.04)",
-    fontSize:13, color:T.text0, outline:"none",
+    fontSize:13, color:"#00004d", outline:"none",
     transition:"border-color .2s", fontFamily:"inherit",
-    WebkitTextFillColor: T.text0,
+    WebkitTextFillColor: "#000000",
     colorScheme:"dark",
   },
-  /* Modal */
   overlay: {
     position:"fixed", inset:0, background:"rgba(0,0,0,0.65)",
     backdropFilter:"blur(6px)", display:"flex", alignItems:"center",
@@ -334,13 +326,12 @@ const S = {
   modalInput: {
     width:"100%", padding:"10px 12px 10px 38px",
     borderRadius:9, border:`1.5px solid ${T.border}`,
-    fontSize:13, color:T.text0, outline:"none",
-    boxSizing:"border-box", background:"rgb(51, 51, 51)",
+    fontSize:13, color:"#e8eaf6", outline:"none",
+    boxSizing:"border-box", background:"#1a1f38",
     transition:"border-color .15s", fontFamily:"inherit",
-    WebkitTextFillColor: T.text0,
+    WebkitTextFillColor:"#00001a",
     colorScheme:"dark",
   },
-  /* Notif */
   notifCard: {
     background:T.bg2, borderRadius:16, padding:"28px",
     border:`1px solid ${T.border}`, textAlign:"center",
@@ -361,7 +352,6 @@ const S = {
     border:"1px solid rgba(62,207,142,0.25)",
     borderRadius:10, padding:"12px 16px", fontWeight:600, fontSize:13, marginTop:12,
   },
-  /* Mobile */
   topbar: {
     padding:"14px 16px",
     background:T.bg1, borderBottom:`1px solid ${T.border}`,
@@ -395,6 +385,7 @@ const S = {
   mobLabel: { fontSize:11, color:T.text2, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.07em" },
   mobVal:   { fontSize:13, fontWeight:500, color:T.text0 },
 };
+
 function DarkBadge({ statut }) {
   const ok  = statut === "payé";
   const mid = statut === "retard";
@@ -416,24 +407,22 @@ function DarkBadge({ statut }) {
 
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString("fr-FR") : "—";
 
-/* ─────────────────────────────────────────────
-   COMPONENT
-───────────────────────────────────────────── */
 export default function AdminDashboard({ onLogout }) {
-  const [tenants,     setTenants]     = useState([]);
-  const [payments,    setPayments]    = useState([]);
-  const [tab,         setTab]         = useState("dashboard");
-  const [modal,       setModal]       = useState(null);
-  const [form,        setForm]        = useState({});
-  const [loading,     setLoading]     = useState(true);
-  const [notifSent,   setNotifSent]   = useState(false);
-  const [isMenuOpen,  setIsMenuOpen]  = useState(false);
-  const [search,      setSearch]      = useState("");
-  const [isMobile,    setIsMobile]    = useState(window.innerWidth <= 768);
-  const [selMois,     setSelMois]     = useState(CURRENT_MONTH);
+  const [tenants,      setTenants]      = useState([]);
+  const [payments,     setPayments]     = useState([]);
+  const [tab,          setTab]          = useState("dashboard");
+  const [modal,        setModal]        = useState(null);
+  const [form,         setForm]         = useState({});
+  const [loading,      setLoading]      = useState(true);
+  const [notifSent,    setNotifSent]    = useState(false);
+  const [isMenuOpen,   setIsMenuOpen]   = useState(false);
+  const [search,       setSearch]       = useState("");
+  const [isMobile,     setIsMobile]     = useState(window.innerWidth <= 768);
+  const [selMois,      setSelMois]      = useState(CURRENT_MONTH);
   const [focusedInput, setFocusedInput] = useState(null);
+  // ── NOUVEAU : toggle visibilité mot de passe ──
+  const [showPassword, setShowPassword] = useState(false);
 
-  /* Inject CSS once */
   useEffect(() => {
     const id = "elecpay-admin-css";
     if (!document.getElementById(id)) {
@@ -485,8 +474,11 @@ export default function AdminDashboard({ onLogout }) {
   const effectiveStatut = (t) =>
     (t.statut === "payé" && t.mois === selMois) ? "payé" : "non payé";
 
-  const openModal  = (type, data={}) => { setModal({type}); setForm({mois:selMois, ...data}); };
-  const closeModal = () => { setModal(null); setForm({}); };
+  const openModal  = (type, data={}) => {
+    setShowPassword(false);
+    setModal({type}); setForm({mois:selMois, ...data});
+  };
+  const closeModal = () => { setModal(null); setForm({}); setShowPassword(false); };
 
   const saveTenant = async () => {
     if (!form.nom || !form.logement || !form.montant) return;
@@ -536,7 +528,6 @@ export default function AdminDashboard({ onLogout }) {
       badge: tenants.filter(t => !(t.statut === "payé" && t.mois === selMois)).length || null },
   ];
 
-  /* ── Sidebar ── */
   const SidebarInner = ({ onNav }) => (
     <>
       <div style={S.sidebarLogo}>
@@ -580,7 +571,6 @@ export default function AdminDashboard({ onLogout }) {
     </>
   );
 
-  /* ── Mobile cards ── */
   const TenantRowCard = ({t}) => (
     <div className="mob-card" style={S.mobCard}>
       <div style={{display:"flex", alignItems:"center", gap:10, marginBottom:10}}>
@@ -664,17 +654,24 @@ export default function AdminDashboard({ onLogout }) {
 
   const currentNav = navItems.find(n => n.key===tab);
 
+  // ── Champs du formulaire locataire ──
+  const formFields = [
+    { key:"nom",       label:"Nom complet",          Icon:User,       type:"text"     },
+    { key:"logement",  label:"N° de logement",       Icon:Home,       type:"text"     },
+    { key:"telephone", label:"Téléphone",            Icon:Phone,      type:"text"     },
+    { key:"montant",   label:"Montant mensuel (Ar)", Icon:DollarSign, type:"number"   },
+    { key:"password",  label:"Mot de passe",         Icon:Lock,       type:"password" },
+  ];
+
   return (
     <div style={S.appWrap}>
 
-      {/* Desktop Sidebar */}
       {!isMobile && (
         <aside style={S.sidebar} className="slide-left">
           <SidebarInner/>
         </aside>
       )}
 
-      {/* Mobile drawer */}
       {isMobile && isMenuOpen && (
         <div style={{
           position:"fixed", inset:0, background:"rgba(0,0,0,0.65)",
@@ -694,7 +691,6 @@ export default function AdminDashboard({ onLogout }) {
 
       <main style={{...S.main, marginLeft: isMobile ? 0 : 240}}>
 
-        {/* Header */}
         <header style={{...S.header, padding: isMobile ? "13px 16px" : "18px 28px"}}>
           <div style={{display:"flex", alignItems:"center", gap:12}}>
             {isMobile && (
@@ -707,7 +703,6 @@ export default function AdminDashboard({ onLogout }) {
               <h2 style={{...S.pageTitle, fontSize: isMobile ? 16 : 18}}>
                 {currentNav?.label}
               </h2>
-              {/* Sélecteur de mois — même style que ClientDashboard */}
               <div style={{position:"relative", display:"inline-flex", alignItems:"center", marginTop:3}}>
                 <div style={{
                   display:"inline-flex", alignItems:"center", gap:6,
@@ -734,7 +729,6 @@ export default function AdminDashboard({ onLogout }) {
           </div>
         </header>
 
-        {/* Content */}
         <div style={{...S.content, padding: isMobile ? "16px 14px 90px" : "24px 28px"}}>
           {loading ? (
             <div style={{display:"flex", alignItems:"center", justifyContent:"center", height:200}}>
@@ -743,10 +737,8 @@ export default function AdminDashboard({ onLogout }) {
           ) : (
             <>
 
-              {/* ══ DASHBOARD ══ */}
               {tab === "dashboard" && (
                 <div className="fade-up">
-                  {/* 4 stat cards */}
                   <div style={{
                     ...S.statsGrid,
                     gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)",
@@ -780,7 +772,6 @@ export default function AdminDashboard({ onLogout }) {
                     ))}
                   </div>
 
-                  {/* Progress + Alertes */}
                   <div style={{
                     ...S.sectionRow,
                     gridTemplateColumns: isMobile ? "1fr" : (stats.nonPayes > 0 ? "1fr 1fr" : "1fr"),
@@ -826,7 +817,6 @@ export default function AdminDashboard({ onLogout }) {
                     )}
                   </div>
 
-                  {/* Tableau résumé */}
                   <div style={S.card}>
                     <div style={S.cardHeader}>
                       <h3 style={S.cardTitle}>Paiements — {selMois}</h3>
@@ -871,7 +861,6 @@ export default function AdminDashboard({ onLogout }) {
                 </div>
               )}
 
-              {/* ══ LOCATAIRES ══ */}
               {tab === "tenants" && (
                 <div className="fade-up">
                   <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16, flexWrap:"wrap", gap:10}}>
@@ -939,7 +928,6 @@ export default function AdminDashboard({ onLogout }) {
                 </div>
               )}
 
-              {/* ══ PAIEMENTS ══ */}
               {tab === "payments" && (
                 <div style={S.card} className="fade-up">
                   <div style={S.cardHeader}>
@@ -985,7 +973,6 @@ export default function AdminDashboard({ onLogout }) {
                 </div>
               )}
 
-              {/* ══ NOTIFICATIONS ══ */}
               {tab === "notifs" && (
                 <div style={{maxWidth:520, margin:"0 auto"}} className="fade-up">
                   <div style={{...S.notifCard, textAlign:"center"}}>
@@ -1040,7 +1027,6 @@ export default function AdminDashboard({ onLogout }) {
           )}
         </div>
 
-        {/* ── Mobile bottom nav ── */}
         {isMobile && (
           <nav style={S.bottomNav}>
             {navItems.map(({key, Icon, label}) => (
@@ -1072,32 +1058,68 @@ export default function AdminDashboard({ onLogout }) {
                 <X size={18} color={T.text1}/>
               </button>
             </div>
-            {[
-              { key:"nom",       label:"Nom complet",          Icon:User,       type:"text"     },
-              { key:"logement",  label:"N° de logement",       Icon:Home,       type:"text"     },
-              { key:"telephone", label:"Téléphone",            Icon:Phone,      type:"text"     },
-              { key:"montant",   label:"Montant mensuel (Ar)", Icon:DollarSign, type:"number"   },
-              { key:"password",  label:"Mot de passe",         Icon:Lock,       type:"password" },
-            ].map(f => (
-              <div key={f.key} style={{marginBottom:14}}>
-                <label style={S.label}>{f.label}</label>
-                <div style={{position:"relative"}}>
-                  <f.Icon size={14} style={{position:"absolute", left:11, top:"50%", transform:"translateY(-50%)", color:T.text0, pointerEvents:"none"}}/>
-                  <input
-                    type={f.type}
-                    placeholder={f.label}
-                    value={form[f.key]||""}
-                    onChange={e => setForm(p => ({...p, [f.key]: f.type==="number" ? +e.target.value : e.target.value}))}
-                    style={{
-                      ...S.modalInput,
-                      ...(focusedInput===f.key ? {borderColor:T.accent, boxShadow:`0 0 0 3px ${T.accentSoft}`} : {}),
-                    }}
-                    onFocus={() => setFocusedInput(f.key)}
-                    onBlur={() => setFocusedInput(null)}
-                  />
+
+            {formFields.map(f => {
+              const isPassword = f.key === "password";
+              const inputType  = isPassword ? (showPassword ? "text" : "password") : f.type;
+
+              return (
+                <div key={f.key} style={{marginBottom:14}}>
+                  <label style={S.label}>{f.label}</label>
+                  <div style={{position:"relative"}}>
+                    {/* Icône gauche */}
+                    <f.Icon size={14} style={{
+                      position:"absolute", left:11, top:"50%",
+                      transform:"translateY(-50%)",
+                      color: focusedInput===f.key ? T.accent : T.text1,
+                      pointerEvents:"none",
+                      transition:"color .15s",
+                    }}/>
+
+                    <input
+                      type={inputType}
+                      placeholder={f.label}
+                      value={form[f.key]||""}
+                      onChange={e => setForm(p => ({...p, [f.key]: f.type==="number" ? +e.target.value : e.target.value}))}
+                      style={{
+                        ...S.modalInput,
+                        // padding-right élargi pour le champ password (place pour l'icône eye)
+                        paddingRight: isPassword ? 38 : 12,
+                        ...(focusedInput===f.key
+                          ? {borderColor:T.accent, boxShadow:`0 0 0 3px ${T.accentSoft}`}
+                          : {}),
+                      }}
+                      onFocus={() => setFocusedInput(f.key)}
+                      onBlur={() => setFocusedInput(null)}
+                    />
+
+                    {/* Bouton eye — uniquement pour le mot de passe */}
+                    {isPassword && (
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(v => !v)}
+                        style={{
+                          position:"absolute", right:10, top:"50%",
+                          transform:"translateY(-50%)",
+                          background:"none", border:"none", cursor:"pointer",
+                          padding:2, display:"flex", alignItems:"center",
+                          color: showPassword ? T.accent : T.text2,
+                          transition:"color .15s",
+                        }}
+                        tabIndex={-1}
+                        title={showPassword ? "Masquer" : "Afficher"}
+                      >
+                        {showPassword
+                          ? <EyeOff size={15}/>
+                          : <Eye    size={15}/>
+                        }
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
+
             <div style={{display:"flex", gap:10, marginTop:24}}>
               <button onClick={closeModal} style={{...S.btnOutline, flex:1, justifyContent:"center"}}>Annuler</button>
               <button onClick={saveTenant} style={{...S.btnPrimary, flex:1, justifyContent:"center"}}>
