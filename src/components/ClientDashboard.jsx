@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import {
   Zap, User, LogOut, History, Building2, Phone,
@@ -9,9 +9,9 @@ import { db } from "../config/firebase";
 import { Badge, Spinner } from "./Common";
 import { CURRENT_MONTH, fmt, getRecentMonths } from "../utils/helpers";
 
-/* ─────────────────────────────────────────
+/* ————————————————————————————————————————
    DARK THEME TOKENS
-───────────────────────────────────────── */
+———————————————————————————————————————— */
 const T = {
   bg0:    "#07080d",
   bg1:    "#0d0f1a",
@@ -34,9 +34,9 @@ const T = {
   warnSoft: "rgba(251,191,36,0.1)",
 };
 
-/* ─────────────────────────────────────────
+/* ————————————————————————————————————————
    STYLES
-───────────────────────────────────────── */
+———————————————————————————————————————— */
 const S = {
   appWrap: {
     display: "flex", minHeight: "100vh",
@@ -263,9 +263,9 @@ const S = {
   }),
 };
 
-/* ─────────────────────────────────────────
+/* ————————————————————————————————————————
    ANIMATIONS (injected once)
-───────────────────────────────────────── */
+———————————————————————————————————————— */
 const CSS_ANIM = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
 
@@ -287,10 +287,6 @@ const CSS_ANIM = `
     0%, 100% { box-shadow: 0 0 8px rgba(91,110,245,0.3); }
     50%       { box-shadow: 0 0 20px rgba(91,110,245,0.55); }
   }
-  @keyframes shimmer {
-    0%   { background-position: -400px 0; }
-    100% { background-position: 400px 0; }
-  }
 
   .fade-up  { animation: fadeUp 0.32s ease both; }
   .fade-in  { animation: fadeIn 0.24s ease both; }
@@ -303,8 +299,6 @@ const CSS_ANIM = `
   .stagger > *:nth-child(2) { animation-delay: 0.08s; }
   .stagger > *:nth-child(3) { animation-delay: 0.12s; }
   .stagger > *:nth-child(4) { animation-delay: 0.16s; }
-  .stagger > *:nth-child(5) { animation-delay: 0.20s; }
-  .stagger > *:nth-child(6) { animation-delay: 0.24s; }
 
   .stat-card:hover {
     border-color: rgba(91,110,245,0.28) !important;
@@ -335,22 +329,16 @@ const CSS_ANIM = `
   select option { background: #0d0f1a; color: #f0f2ff; }
 `;
 
-/* ─────────────────────────────────────────
-   DARK BADGE
-───────────────────────────────────────── */
 function DarkBadge({ statut }) {
   const ok = statut === "payé";
   return (
     <span style={S.badge(ok)}>
-      <span style={{ width: 5, height: 5, borderRadius: "50%", background: ok ? T.success : T.danger }} />
+      <span style={{ width: 5, height: 5, borderRadius: "50%", background: ok ? T.success : T.danger }} />      
       {ok ? "Payé" : "En attente"}
     </span>
   );
 }
 
-/* ─────────────────────────────────────────
-   MAIN COMPONENT
-───────────────────────────────────────── */
 export default function ClientDashboard({ user, onLogout }) {
   const [tenants,     setTenants]     = useState([]);
   const [payments,    setPayments]    = useState([]);
@@ -405,16 +393,31 @@ export default function ClientDashboard({ user, onLogout }) {
   const me     = processedTenants.find(t => t.id === user.tenant.id) || user.tenant;
   const isPaye = me.statut === "payé";
 
+  /* LOGIQUE DE RAPPEL AUTOMATIQUE (Front-end) */
+  useEffect(() => {
+    if (!loading && !isPaye && selectedMonth === CURRENT_MONTH) {
+      const day = new Date().getDate();
+      if (day >= 15) {
+        // Notification navigateur si possible
+        if (Notification.permission === "granted") {
+          new Notification("Rappel de paiement ElecPay", {
+            body: `Nous sommes le ${day}, votre paiement pour ${selectedMonth} est toujours en attente.`,
+            icon: "/favicon.ico"
+          });
+        }
+      }
+    }
+  }, [loading, isPaye, selectedMonth]);
+
   const navItems = [
     { key: "profil",     Icon: User,      label: "Mon profil"  },
     { key: "historique", Icon: History,   label: "Historique"  },
     { key: "locataires", Icon: Building2, label: "Locataires"  },
   ];
 
-  /* ── Sidebar shared content ── */
+  /* —— Sidebar shared content —— */
   const SidebarInner = () => (
     <>
-      {/* Logo */}
       <div style={S.sidebarLogo}>
         <div style={S.logoIcon} className="logo-icon">
           <Zap size={17} color="#fff" strokeWidth={2.5} />
@@ -424,384 +427,139 @@ export default function ClientDashboard({ user, onLogout }) {
           <div style={S.logoSub}>Électricité</div>
         </div>
       </div>
-
-      {/* Nav */}
       <nav style={S.sidebarNav}>
         <div style={S.navSection}>Navigation</div>
         {navItems.map(({ key, Icon, label }) => (
-          <button
-            key={key}
-            className="nav-item"
-            onClick={() => { setTab(key); setMenuOpen(false); }}
-            style={S.navItem(tab === key)}
-          >
+          <button key={key} className="nav-item" onClick={() => { setTab(key); setMenuOpen(false); }} style={S.navItem(tab === key)}>
             <Icon size={16} strokeWidth={tab === key ? 2.5 : 1.8} />
             <span style={{ flex: 1 }}>{label}</span>
             {tab === key && <div style={S.navDot} />}
           </button>
         ))}
       </nav>
-
-      {/* Bottom: user + logout */}
       <div style={S.sidebarBottom}>
         <div style={S.userCard}>
           <div style={S.avatar(32, 9)}>{me.nom?.[0]}</div>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: T.text0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {me.nom?.split(" ")[0]}
-            </div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: T.text0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{me.nom?.split(" ")[0]}</div>
             <div style={{ fontSize: 11, color: T.text2 }}>{me.logement}</div>
           </div>
         </div>
-        <button className="logout-btn" onClick={onLogout} style={S.logoutBtn}>
-          <LogOut size={13} /> Déconnexion
-        </button>
+        <button className="logout-btn" onClick={onLogout} style={S.logoutBtn}><LogOut size={13} /> Déconnexion</button>
       </div>
     </>
   );
 
-  /* ── Mobile payment card ── */
   const PaymentCard = ({ p }) => (
     <div className="mob-card fade-up" style={S.mobCard}>
-      {[
-        ["Mois",   p.mois,   T.text0],
-        ["Montant", fmt(p.montant), T.accent],
-        ["Date",   p.date,   T.text1],
-      ].map(([l, v, c]) => (
-        <div key={l} style={S.mobRow}>
-          <span style={S.mobLabel}>{l}</span>
-          <span style={{ ...S.mobVal, color: c }}>{v}</span>
-        </div>
+      {[ ["Mois", p.mois, T.text0], ["Montant", fmt(p.montant), T.accent], ["Date", p.date, T.text1], ].map(([l, v, c]) => (
+        <div key={l} style={S.mobRow}><span style={S.mobLabel}>{l}</span><span style={{ ...S.mobVal, color: c }}>{v}</span></div>
       ))}
-      <div style={{ ...S.mobRow, borderBottom: "none" }}>
-        <span style={S.mobLabel}>Statut</span>
-        <DarkBadge statut={p.statut} />
-      </div>
+      <div style={{ ...S.mobRow, borderBottom: "none" }}><span style={S.mobLabel}>Statut</span><DarkBadge statut={p.statut} /></div>
     </div>
   );
 
-  /* ── Mobile tenant card ── */
   const TenantCard = ({ t }) => (
-    <div
-      className="mob-card fade-up"
-      style={{
-        ...S.mobCard,
-        ...(t.id === me.id ? { borderColor: `rgba(91,110,245,0.4)`, borderLeft: `3px solid ${T.accent}` } : {}),
-      }}
-    >
+    <div className="mob-card fade-up" style={{ ...S.mobCard, ...(t.id === me.id ? { borderColor: "rgba(91,110,245,0.4)", borderLeft: `3px solid ${T.accent}` } : {}) }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
         <div style={S.avatar(34, 9)}>{t.nom?.[0]}</div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 14, color: T.text0 }}>{t.nom}</div>
-          <div style={{ fontSize: 12, color: T.text2 }}>{t.logement}</div>
-        </div>
-        {t.id === me.id && (
-          <span style={{ fontSize: 10, background: T.accentSoft, color: T.accent, padding: "2px 8px", borderRadius: 20, fontWeight: 800, border: `1px solid ${T.border}` }}>
-            Moi
-          </span>
-        )}
+        <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 700, fontSize: 14, color: T.text0 }}>{t.nom}</div><div style={{ fontSize: 12, color: T.text2 }}>{t.logement}</div></div>
+        {t.id === me.id && <span style={{ fontSize: 10, background: T.accentSoft, color: T.accent, padding: "2px 8px", borderRadius: 20, fontWeight: 800, border: `1px solid ${T.border}` }}>Moi</span>}
       </div>
-      <div style={S.mobRow}>
-        <span style={S.mobLabel}>Mois</span>
-        <span style={{ ...S.mobVal, color: T.text1 }}>{selectedMonth}</span>
-      </div>
-      <div style={{ ...S.mobRow, borderBottom: "none" }}>
-        <span style={S.mobLabel}>Statut</span>
-        <DarkBadge statut={t.statut} />
-      </div>
+      <div style={S.mobRow}><span style={S.mobLabel}>Mois</span><span style={{ ...S.mobVal, color: T.text1 }}>{selectedMonth}</span></div>
+      <div style={{ ...S.mobRow, borderBottom: "none" }}><span style={S.mobLabel}>Statut</span><DarkBadge statut={t.statut} /></div>
     </div>
   );
 
-  /* ─────── RENDER ─────── */
   return (
     <div style={S.appWrap}>
-
-      {/* ── Desktop sidebar ── */}
-      {!isMobile && (
-        <aside style={S.sidebar} className="slide-left">
-          <SidebarInner />
-        </aside>
-      )}
-
-      {/* ── Mobile drawer overlay ── */}
-      {isMobile && menuOpen && (
-        <div
-          style={{
-            position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)",
-            backdropFilter: "blur(4px)", zIndex: 200,
-            animation: "fadeIn 0.18s ease both",
-          }}
-          onClick={() => setMenuOpen(false)}
-        >
-          <div
-            style={{
-              position: "fixed", left: 0, top: 0, height: "100vh", width: 260,
-              background: T.bg1, display: "flex", flexDirection: "column",
-              borderRight: `1px solid ${T.border}`,
-              animation: "slideInLeft 0.22s ease both",
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            <SidebarInner />
-          </div>
-        </div>
-      )}
-
-      {/* ── Main area ── */}
+      {!isMobile && <aside style={S.sidebar} className="slide-left"><SidebarInner /></aside>}
+      {isMobile && menuOpen && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", zIndex: 200, animation: "fadeIn 0.18s ease both" }} onClick={() => setMenuOpen(false)}><div style={{ position: "fixed", left: 0, top: 0, height: "100vh", width: 260, background: T.bg1, display: "flex", flexDirection: "column", borderRight: `1px solid ${T.border}`, animation: "slideInLeft 0.22s ease both" }} onClick={e => e.stopPropagation()}><SidebarInner /></div></div>}
       <main style={{ ...S.main, marginLeft: isMobile ? 0 : 240 }}>
-
-        {/* Header */}
         <header style={{ ...S.header, padding: isMobile ? "13px 16px" : "18px 28px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {isMobile && (
-              <button
-                onClick={() => setMenuOpen(true)}
-                style={{ background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex", color: T.text1 }}
-              >
-                <Menu size={21} color={T.text0} />
-              </button>
-            )}
-            <div>
-              <h2 style={{ ...S.pageTitle, fontSize: isMobile ? 16 : 18 }}>
-                {navItems.find(n => n.key === tab)?.label}
-              </h2>
-              <select
-                value={selectedMonth}
-                onChange={e => setSelectedMonth(e.target.value)}
-                style={S.monthSel}
-              >
-                {getRecentMonths().map(m => <option key={m} value={m}>{m}</option>)}
-              </select>
+            {isMobile && <button onClick={() => setMenuOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex", color: T.text1 }}><Menu size={21} color={T.text0} /></button>}
+            <div><h2 style={{ ...S.pageTitle, fontSize: isMobile ? 16 : 18 }}>{navItems.find(n => n.key === tab)?.label}</h2>
+              <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={S.monthSel}>{getRecentMonths().map(m => <option key={m} value={m}>{m}</option>)}</select>
             </div>
           </div>
           <DarkBadge statut={me.statut} />
         </header>
-
-        {/* Content */}
         <div style={{ ...S.content, padding: isMobile ? "16px 14px 90px" : "24px 28px" }}>
-          {loading ? (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200 }}>
-              <Spinner />
-            </div>
-          ) : (
-
-            /* ── PROFIL ── */
+          {loading ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200 }}><Spinner /></div> : (
             tab === "profil" ? (
               <div style={{ maxWidth: 820 }} className="fade-up">
-                {/* Hero */}
-                <div style={{
-                  ...S.hero,
-                  flexDirection: isMobile ? "column" : "row",
-                  alignItems: isMobile ? "flex-start" : "center",
-                  gap: isMobile ? 14 : 20,
-                  padding: isMobile ? "18px 16px" : "24px",
-                }}>
-                  <div style={S.heroGlow} />
-                  <div style={{ ...S.avatar(isMobile ? 48 : 58, 14), boxShadow: `0 0 24px ${T.accentGlow}` }}>
-                    {me.nom?.[0]}
+                <div style={{ ...S.hero, flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-start" : "center", gap: isMobile ? 14 : 20, padding: isMobile ? "18px 16px" : "24px" }}>
+                  <div style={S.heroGlow} /><div style={{ ...S.avatar(isMobile ? 48 : 58, 14), boxShadow: `0 0 24px ${T.accentGlow}` }}>{me.nom?.[0]}</div>
+                  <div style={{ flex: 1, minWidth: 0, zIndex: 1 }}><h3 style={{ fontSize: isMobile ? 19 : 22, fontWeight: 800, color: T.text0, margin: 0, letterSpacing: "-0.5px" }}>{me.nom}</h3>
+                    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, color: T.text1, marginTop: 6, fontSize: 13 }}><Home size={13} color={T.text2} /> {me.logement}{me.telephone && (<><span style={{ color: T.text2 }}>·</span><Phone size={13} color={T.text2} /> {me.telephone}</>)}</div>
                   </div>
-                  <div style={{ flex: 1, minWidth: 0, zIndex: 1 }}>
-                    <h3 style={{ fontSize: isMobile ? 19 : 22, fontWeight: 800, color: T.text0, margin: 0, letterSpacing: "-0.5px" }}>
-                      {me.nom}
-                    </h3>
-                    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, color: T.text1, marginTop: 6, fontSize: 13 }}>
-                      <Home size={13} color={T.text2} /> {me.logement}
-                      {me.telephone && (
-                        <><span style={{ color: T.text2 }}>·</span><Phone size={13} color={T.text2} /> {me.telephone}</>
-                      )}
-                    </div>
-                  </div>
-                  {/* Status pill */}
-                  <div style={{
-                    padding: "12px 18px", borderRadius: 13, textAlign: "center", zIndex: 1,
-                    background: isPaye ? T.successSoft : T.dangerSoft,
-                    border: `1px solid ${isPaye ? "rgba(62,207,142,0.25)" : "rgba(248,113,113,0.25)"}`,
-                    alignSelf: isMobile ? "stretch" : undefined,
-                  }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: T.text2, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>
-                      Statut
-                    </div>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: isPaye ? T.success : T.danger }}>
-                      {isPaye ? "✓ Payé" : "✗ En attente"}
-                    </div>
+                  <div style={{ padding: "12px 18px", borderRadius: 13, textAlign: "center", zIndex: 1, background: isPaye ? T.successSoft : T.dangerSoft, border: `1px solid ${isPaye ? "rgba(62,207,142,0.25)" : "rgba(248,113,113,0.25)"}`, alignSelf: isMobile ? "stretch" : undefined }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: T.text2, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Statut</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: isPaye ? T.success : T.danger }}>{isPaye ? "✓ Payé" : "✕ En attente"}</div>
                   </div>
                 </div>
-
-                {/* Stat cards */}
-                <div style={{
-                  ...S.statsGrid,
-                  gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)",
-                  gap: isMobile ? 10 : 12,
-                }} className="stagger">
-                  {[
-                    { label: "Mois en cours",    val: selectedMonth,         Icon: Calendar,    color: T.accent,   bg: T.accentSoft  },
-                    { label: "Montant à payer",   val: fmt(me.montant),       Icon: DollarSign,  color: T.success,  bg: T.successSoft },
-                    { label: "Dernier paiement",  val: me.datePaiement || "—",Icon: CheckCircle, color: isPaye ? T.success : T.text2, bg: isPaye ? T.successSoft : `rgba(255,255,255,0.04)` },
-                    { label: "Téléphone",         val: me.telephone || "—",   Icon: Phone,       color: "#60a5fa",  bg: "rgba(96,165,250,0.1)" },
-                  ].map(r => (
+                <div style={{ ...S.statsGrid, gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: isMobile ? 10 : 12 }} className="stagger">
+                  {[ { label: "Mois en cours", val: selectedMonth, Icon: Calendar, color: T.accent, bg: T.accentSoft }, { label: "Montant à payer", val: fmt(me.montant), Icon: DollarSign, color: T.success, bg: T.successSoft }, { label: "Dernier paiement", val: me.datePaiement || "—", Icon: CheckCircle, color: isPaye ? T.success : T.text2, bg: isPaye ? T.successSoft : `rgba(255,255,255,0.04)` }, { label: "Téléphone", val: me.telephone || "—", Icon: Phone, color: "#60a5fa", bg: "rgba(96,165,250,0.1)" }, ].map(r => (
                     <div key={r.label} className="stat-card" style={{ ...S.statCard, padding: isMobile ? "14px" : "16px" }}>
-                      <div style={{ ...S.statIconWrap, background: r.bg }}>
-                        <r.Icon size={18} color={r.color} strokeWidth={2} />
-                      </div>
-                      <div style={{ ...S.statValue, fontSize: isMobile ? 13 : 17, color: r.color, wordBreak: "break-word" }}>
-                        {r.val}
-                      </div>
+                      <div style={{ ...S.statIconWrap, background: r.bg }}><r.Icon size={18} color={r.color} strokeWidth={2} /></div>
+                      <div style={{ ...S.statValue, fontSize: isMobile ? 13 : 17, color: r.color, wordBreak: "break-word" }}>{r.val}</div>
                       <div style={S.statLabel}>{r.label}</div>
                     </div>
                   ))}
                 </div>
-
                 {!isPaye && (
                   <div style={S.alertWarn} className="fade-up">
                     <AlertTriangle size={20} color={T.warn} style={{ flexShrink: 0, marginTop: 1 }} />
-                    <div>
-                      <div style={{ fontWeight: 700, color: T.warn, fontSize: 14, marginBottom: 3 }}>
-                        Paiement en attente
-                      </div>
-                      <div style={{ color: "rgba(251,191,36,0.7)", fontSize: 13, lineHeight: 1.55 }}>
-                        Votre paiement d'électricité pour <strong style={{ color: T.warn }}>{selectedMonth}</strong> n'a pas encore été enregistré. Contactez votre gestionnaire.
-                      </div>
+                    <div><div style={{ fontWeight: 700, color: T.warn, fontSize: 14, marginBottom: 3 }}>Paiement en attente</div>
+                      <div style={{ color: "rgba(251,191,36,0.7)", fontSize: 13, lineHeight: 1.55 }}>Votre paiement d'électricité pour <strong style={{ color: T.warn }}>{selectedMonth}</strong> n'a pas encore été enregistré. Contactez votre gestionnaire.</div>
                     </div>
                   </div>
                 )}
               </div>
-            )
-
-            /* ── HISTORIQUE ── */
-            : tab === "historique" ? (
+            ) : tab === "historique" ? (
               <div style={{ maxWidth: 820 }} className="fade-up">
-                <div style={S.card}>
-                  <div style={S.cardHeader}>
-                    <span style={S.cardTitle}>Mes paiements</span>
-                    <span style={{ fontSize: 12, color: T.text2 }}>
-                      {payments.length} entrée{payments.length > 1 ? "s" : ""}
-                    </span>
-                  </div>
+                <div style={S.card}><div style={S.cardHeader}><span style={S.cardTitle}>Mes paiements</span><span style={{ fontSize: 12, color: T.text2 }}>{payments.length} entrée{payments.length > 1 ? "s" : ""}</span></div>
                   {payments.length === 0 ? (
-                    <div style={S.emptyState}>
-                      <History size={40} strokeWidth={1} color={T.text2} />
-                      <p style={{ fontWeight: 600, color: T.text1, margin: 0 }}>Aucun paiement trouvé</p>
-                      <p style={{ fontSize: 12, margin: 0 }}>Votre historique apparaîtra ici.</p>
-                    </div>
+                    <div style={S.emptyState}><History size={40} strokeWidth={1} color={T.text2} /><p style={{ fontWeight: 600, color: T.text1, margin: 0 }}>Aucun paiement trouvé</p><p style={{ fontSize: 12, margin: 0 }}>Votre historique apparaîtra ici.</p></div>
                   ) : isMobile ? (
-                    <div style={{ padding: "10px 12px" }}>
-                      {[...payments].reverse().map(p => <PaymentCard key={p.id} p={p} />)}
-                    </div>
+                    <div style={{ padding: "10px 12px" }}>{[...payments].reverse().map(p => <PaymentCard key={p.id} p={p} />)}</div>
                   ) : (
-                    <div style={{ overflowX: "auto" }}>
-                      <div style={{ minWidth: 500 }}>
-                        <div style={{ ...S.tableHead, gridTemplateColumns: "1.5fr 1fr 1.5fr 1fr" }}>
-                          <span>Mois</span><span>Montant</span><span>Date</span><span>Statut</span>
-                        </div>
+                    <div style={{ overflowX: "auto" }}><div style={{ minWidth: 500 }}><div style={{ ...S.tableHead, gridTemplateColumns: "1.5fr 1fr 1.5fr 1fr" }}><span>Mois</span><span>Montant</span><span>Date</span><span>Statut</span></div>
                         <div className="stagger">
                           {[...payments].reverse().map(p => (
-                            <div
-                              key={p.id}
-                              className="table-row"
-                              style={{ ...S.tableRow, gridTemplateColumns: "1.5fr 1fr 1.5fr 1fr" }}
-                            >
+                            <div key={p.id} className="table-row" style={{ ...S.tableRow, gridTemplateColumns: "1.5fr 1fr 1.5fr 1fr" }}>
                               <span style={{ fontWeight: 600, color: T.text0 }}>{p.mois}</span>
-                              <span style={{ fontWeight: 700, color: T.accent }}>{fmt(p.montant)}</span>
+                              <span style={{ fontWeight: 700, color: T.accent }}>{fmt(p.montant)}</span>        
                               <span style={{ color: T.text2, fontSize: 12 }}>{p.date}</span>
                               <DarkBadge statut={p.statut} />
                             </div>
                           ))}
                         </div>
-                      </div>
-                    </div>
+                      </div></div>
                   )}
                 </div>
               </div>
-            )
-
-            /* ── LOCATAIRES ── */
-            : tab === "locataires" ? (
+            ) : tab === "locataires" ? (
               <div style={{ maxWidth: 820 }} className="fade-up">
-                <div style={S.alertInfo}>
-                  <ShieldCheck size={15} color={T.accent} style={{ flexShrink: 0 }} />
-                  <span style={{ color: T.accent, fontWeight: 500, fontSize: 13 }}>
-                    Vue publique — Les informations sensibles sont protégées.
-                  </span>
-                </div>
-                <div style={S.card}>
-                  <div style={S.cardHeader}>
-                    <span style={S.cardTitle}>Locataires — {selectedMonth}</span>
-                    <span style={{ fontSize: 12, color: T.text2 }}>{processedTenants.length} locataires</span>
-                  </div>
-                  {isMobile ? (
-                    <div style={{ padding: "10px 12px" }}>
-                      {processedTenants.map(t => <TenantCard key={t.id} t={t} />)}
-                    </div>
-                  ) : (
-                    <div style={{ overflowX: "auto" }}>
-                      <div style={{ minWidth: 500 }}>
-                        <div style={{ ...S.tableHead, gridTemplateColumns: "2fr 1fr 1.5fr 1fr" }}>
-                          <span>Locataire</span><span>Logement</span><span>Mois</span><span>Statut</span>
-                        </div>
-                        <div className="stagger">
-                          {processedTenants.map(t => (
-                            <div
-                              key={t.id}
-                              className="table-row"
-                              style={{
-                                ...S.tableRow,
-                                gridTemplateColumns: "2fr 1fr 1.5fr 1fr",
-                                ...(t.id === me.id ? {
-                                  background: T.accentSoft,
-                                  borderLeft: `3px solid ${T.accent}`,
-                                } : {}),
-                              }}
-                            >
-                              <span style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 600, color: T.text0 }}>
-                                <div style={S.avatar(30, 8)}>{t.nom?.[0]}</div>
-                                {t.nom}
-                                {t.id === me.id && (
-                                  <span style={{ fontSize: 10, background: T.accentSoft, color: T.accent, padding: "2px 8px", borderRadius: 20, fontWeight: 800, border: `1px solid ${T.border}` }}>
-                                    Moi
-                                  </span>
-                                )}
-                              </span>
-                              <span style={{ color: T.text2, fontSize: 13 }}>{t.logement}</span>
-                              <span style={{ color: T.text2, fontSize: 12 }}>{selectedMonth}</span>
-                              <DarkBadge statut={t.statut} />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
+                <div style={S.alertInfo}><ShieldCheck size={15} color={T.accent} style={{ flexShrink: 0 }} /><span style={{ color: T.accent, fontWeight: 500, fontSize: 13 }}>Vue publique — Les informations sensibles sont protégées.</span></div>
+                <div style={S.card}><div style={S.cardHeader}><span style={S.cardTitle}>Locataires — {selectedMonth}</span><span style={{ fontSize: 12, color: T.text2 }}>{processedTenants.length} locataires</span></div>
+                  {isMobile ? ( <div style={{ padding: "10px 12px" }}>{processedTenants.map(t => <TenantCard key={t.id} t={t} />)}</div> ) : (
+                    <div style={{ overflowX: "auto" }}><div style={{ minWidth: 500 }}><div style={{ ...S.tableHead, gridTemplateColumns: "2fr 1fr 1.5fr 1fr" }}><span>Locataire</span><span>Logement</span><span>Mois</span><span>Statut</span></div>
+                        <div className="stagger">{processedTenants.map(t => (
+                            <div key={t.id} className="table-row" style={{ ...S.tableRow, gridTemplateColumns: "2fr 1fr 1.5fr 1fr", ...(t.id === me.id ? { background: T.accentSoft, borderLeft: `3px solid ${T.accent}` } : {}) }}><span style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 600, color: T.text0 }}><div style={S.avatar(30, 8)}>{t.nom?.[0]}</div>{t.nom}{t.id === me.id && <span style={{ fontSize: 10, background: T.accentSoft, color: T.accent, padding: "2px 8px", borderRadius: 20, fontWeight: 800, border: `1px solid ${T.border}` }}>Moi</span>}</span><span style={{ color: T.text2, fontSize: 13 }}>{t.logement}</span><span style={{ color: T.text2, fontSize: 12 }}>{selectedMonth}</span><DarkBadge statut={t.statut} /></div>
+                          ))}</div>
+                      </div></div>
                   )}
                 </div>
               </div>
             ) : null
           )}
         </div>
-
-        {/* ── Mobile bottom navigation (always visible) ── */}
         {isMobile && (
           <nav style={S.bottomNav}>
-            {navItems.map(({ key, Icon, label }) => (
-              <button
-                key={key}
-                onClick={() => setTab(key)}
-                style={S.bottomNavItem(tab === key)}
-              >
-                <Icon size={20} strokeWidth={tab === key ? 2.5 : 1.8} />
-                <span>{label}</span>
-              </button>
-            ))}
-            {/* Logout button in bottom nav */}
-            <button
-              onClick={onLogout}
-              style={{
-                ...S.bottomNavItem(false),
-                color: T.danger,
-                borderLeft: `1px solid ${T.border}`,
-                flex: "0 0 64px",
-              }}
-            >
-              <LogOut size={20} strokeWidth={1.8} />
-              <span>Sortir</span>
-            </button>
+            {navItems.map(({ key, Icon, label }) => ( <button key={key} onClick={() => setTab(key)} style={S.bottomNavItem(tab === key)}><Icon size={20} strokeWidth={tab === key ? 2.5 : 1.8} /><span>{label}</span></button> ))}
+            <button onClick={onLogout} style={{ ...S.bottomNavItem(false), color: T.danger, borderLeft: `1px solid ${T.border}`, flex: "0 0 64px" }}><LogOut size={20} strokeWidth={1.8} /><span>Sortir</span></button>
           </nav>
         )}
       </main>
