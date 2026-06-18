@@ -10,7 +10,8 @@ import {
   Search, RefreshCw, User, AlertTriangle, ChevronRight, Lock, Calendar,
   Eye, EyeOff
 } from "lucide-react";
-import { db } from "../config/firebase";
+import { db, functions } from "../config/firebase";
+import { httpsCallable } from "firebase/functions";
 import { Badge, Spinner } from "./Common";
 import { CURRENT_MONTH, fmt, getRecentMonths } from "../utils/helpers";
 const T = {
@@ -1008,7 +1009,7 @@ export default function AdminDashboard({ onLogout }) {
                           ))}
                         </div>
                         <button
-                          onClick={() => { setNotifSent(true); setTimeout(() => setNotifSent(false), 4000); }}
+                          onClick={async () => { try { const sendReminders = httpsCallable(functions, "sendManualReminders"); await sendReminders({ mois: selMois }); setNotifSent(true); setTimeout(() => setNotifSent(false), 4000); } catch (error) { console.error("Erreur d'envoi des rappels:", error); alert("Erreur lors de l'envoi des rappels."); } }}
                           style={{...S.btnPrimary, width:"100%", justifyContent:"center", padding:"13px"}}>
                           <Send size={16}/> Envoyer les rappels
                         </button>
