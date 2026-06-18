@@ -8,7 +8,6 @@ export const requestForToken = async () => {
     });
     if (currentToken) {
       console.log("Token FCM récupéré :", currentToken);
-      // Ici, vous devriez envoyer le token à votre serveur ou le stocker dans Firestore
       return currentToken;
     } else {
       console.log("Aucun token d'enregistrement disponible. Demandez la permission de générer un token.");
