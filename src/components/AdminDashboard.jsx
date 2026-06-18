@@ -1009,7 +1009,7 @@ export default function AdminDashboard({ onLogout }) {
                           ))}
                         </div>
                         <button
-                          onClick={async () => { try { const sendReminders = httpsCallable(functions, "sendManualReminders"); await sendReminders({ mois: selMois }); setNotifSent(true); setTimeout(() => setNotifSent(false), 4000); } catch (error) { console.error("Erreur d'envoi des rappels:", error); alert("Erreur lors de l'envoi des rappels."); } }}
+                          onClick={async () => { try { const sendReminders = httpsCallable(functions, "sendManualReminders"); await sendReminders({ mois: selMois }); setNotifSent(true); setTimeout(() => setNotifSent(false), 4000); } catch (error) { console.error("Erreur d'envoi des rappels:", error); alert("Erreur lors de l'envoi des rappels: " + (error.message || error.code || "Erreur inconnue")); console.error("DÃ©tails erreur:", error); } }}
                           style={{...S.btnPrimary, width:"100%", justifyContent:"center", padding:"13px"}}>
                           <Send size={16}/> Envoyer les rappels
                         </button>
@@ -1133,3 +1133,4 @@ export default function AdminDashboard({ onLogout }) {
     </div>
   );
 }
+
