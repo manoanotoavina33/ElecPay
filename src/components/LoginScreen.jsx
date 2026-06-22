@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { collection, getDocs } from "firebase/firestore";
-import { Zap, User, ShieldCheck, ChevronRight, Lock, Eye, EyeOff } from "lucide-react";
+import { Zap, User, ShieldCheck, ChevronRight, Lock, Eye, EyeOff, Sun, Moon, Check } from "lucide-react";
 import { db } from "../config/firebase";
 import { S } from "../styles/theme";
 import { Spinner } from "./Common";
+import { useTheme } from "../context/ThemeContext";
 
 function ZapOrb({ size, top, left, opacity, delay }) {
   return (
@@ -18,6 +19,7 @@ function ZapOrb({ size, top, left, opacity, delay }) {
 }
 
 export default function LoginScreen({ onLogin }) {
+  const { isDark, toggleTheme } = useTheme();
   const [role, setRole]         = useState("client");
   const [sel, setSel]           = useState("");
   const [pass, setPass]         = useState("");
@@ -27,8 +29,29 @@ export default function LoginScreen({ onLogin }) {
   const [shake, setShake]       = useState(false);
   const [focused, setFocused]   = useState(null);
   const [showPass, setShowPass] = useState(false);
-
+  const [rememberMe, setRememberMe] = useState(false);
   const passRef = useRef(null);
+
+  // Auto‑login if user previously chose "Remember Me"
+  useEffect(() => {
+    const stored = localStorage.getItem('elecpay_user');
+    if (stored) {
+      try {
+        const data = JSON.parse(stored);
+        // data: { role: 'admin' } or { role: 'client', tenantId }
+        if (data.role === 'admin') {
+          onLogin({ role: 'admin' });
+        } else if (data.role === 'client' && data.tenantId) {
+          const tenant = tenants.find(t => t.id === data.tenantId);
+          if (tenant) onLogin({ role: 'client', tenant });
+        }
+      } catch (_) {}
+    }
+  }, [tenants]);
+
+
+
+
 
   useEffect(() => {
     getDocs(collection(db, "clients"))
@@ -49,11 +72,15 @@ export default function LoginScreen({ onLogin }) {
     setErr("");
     if (role === "admin") {
       if (pass !== "elecpay1234") { setErr("Code d'accès incorrect."); triggerShake(); return; }
-      onLogin({ role: "admin" });
+      const userData = { role: "admin" };
+      if (rememberMe) localStorage.setItem('elecpay_user', JSON.stringify(userData));
+      onLogin(userData);
     } else {
       const t = tenants.find(x => x.id === sel);
       if (!t) { setErr("Veuillez sélectionner un locataire."); triggerShake(); return; }
       if (t.password && pass !== t.password) { setErr("Mot de passe incorrect."); triggerShake(); return; }
+      const userData = { role: "client", tenantId: t.id };
+      if (rememberMe) localStorage.setItem('elecpay_user', JSON.stringify(userData));
       onLogin({ role: "client", tenant: t });
     }
   };
@@ -73,6 +100,26 @@ export default function LoginScreen({ onLogin }) {
 
   return (
     <div style={ls.wrap}>
+      {/* ── Bouton bascule Sombre / Clair ── */}
+      <button
+        onClick={toggleTheme}
+        title={isDark ? "Passer en mode clair" : "Passer en mode sombre"}
+        style={{
+          position:"absolute", top:16, right:16, zIndex:20,
+          display:"flex", alignItems:"center", gap:7,
+          padding:"8px 16px", borderRadius:99,
+          border:"1px solid rgba(99,102,241,0.35)",
+          background:"rgba(15,23,42,0.75)",
+          backdropFilter:"blur(10px)",
+          color:"#a5b4fc", fontSize:13, fontWeight:700,
+          cursor:"pointer", transition:"all .2s",
+          boxShadow:"0 2px 12px rgba(0,0,0,0.3)",
+          fontFamily:"inherit",
+        }}
+      >
+        {isDark ? <Sun size={14}/> : <Moon size={14}/>}
+        <span>{isDark ? "Mode clair" : "Mode sombre"}</span>
+      </button>
       <style>{`
         @keyframes floatOrb {
           0%, 100% { transform: translateY(0px) rotate(0deg); }
@@ -205,43 +252,73 @@ export default function LoginScreen({ onLogin }) {
           )}
 
           {/* Champ mot de passe — présent pour les deux rôles */}
-          <div style={{ position:"relative" }}>
-            <Lock size={15} style={{
-              position:"absolute", left:14, top:"50%",
-              transform:"translateY(-50%)", color:"#64748b", pointerEvents:"none",
-            }} />
-            <input
-                ref={passRef}
-                type="text"
-                placeholder={role === "admin" ? "Code d'accès" : "Mot de passe"}
-                value={pass}
-                onChange={e => setPass(e.target.value)}
-                onFocus={() => setFocused("pass")}
-                onBlur={() => setFocused(null)}
-                onKeyDown={e => e.key === "Enter" && handleLogin()}
-                autoComplete="off"
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ position:"relative" }}>
+              <Lock size={15} style={{
+                position:"absolute", left:14, top:"50%",
+                transform:"translateY(-50%)", color:"#64748b", pointerEvents:"none",
+              }} />
+              <input
+                  ref={passRef}
+                  type="text"
+                  placeholder={role === "admin" ? "Code d'accès" : "Mot de passe"}
+                  value={pass}
+                  onChange={e => setPass(e.target.value)}
+                  onFocus={() => setFocused("pass")}
+                  onBlur={() => setFocused(null)}
+                  onKeyDown={e => e.key === "Enter" && handleLogin()}
+                  autoComplete="off"
+                  style={{
+                    ...S.inputDark,
+                    paddingLeft: 42,
+                    paddingRight: 46,
+                    caretColor: "#fff",
+                    WebkitTextSecurity: showPass ? "none" : "disc",
+                    WebkitTextFillColor: focused === "pass" ? "#000000" : "#CCFFCC", 
+                    ...(focused === "pass" ? S.inputDarkFocus : {}),
+                  }}
+              />
+              {/* Bouton oeil */}
+              <button
+                type="button"
+                onMouseDown={toggleShowPass}
+                tabIndex={-1}
                 style={{
-                  ...S.inputDark,
-                  paddingLeft: 42,
-                  paddingRight: 46,
-                  caretColor: "#fff",
-                  WebkitTextSecurity: showPass ? "none" : "disc",
-                  WebkitTextFillColor: focused === "pass" ? "#000000" : "#CCFFCC", 
-                  ...(focused === "pass" ? S.inputDarkFocus : {}),
-                }}
-            />
-            {/* Bouton oeil */}
-            <button
-              type="button"
-              onMouseDown={toggleShowPass}
-              tabIndex={-1}
-              style={{
-                position:"absolute", right:12, top:"50%", transform:"translateY(-50%)",
-                background:"none", border:"none", color:"#64748b", cursor:"pointer",
-                display:"flex", alignItems:"center", padding:2,
-              }}>
-              {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
+                  position:"absolute", right:12, top:"50%", transform:"translateY(-50%)",
+                  background:"none", border:"none", color:"#64748b", cursor:"pointer",
+                  display:"flex", alignItems:"center", padding:2,
+                }}>
+                {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+            {/* Remember Me checkbox */}
+            <div style={{ display:"flex", alignItems:"center", color: focused === "pass" ? "#6366f1" : "#475569" }}>
+              <label htmlFor="rememberMe" style={{ display:"flex", alignItems:"center", cursor:"pointer" }}>
+                <input
+                  type="checkbox"
+                  id="rememberMe"
+                  checked={rememberMe}
+                  onChange={e => setRememberMe(e.target.checked)}
+                  style={{ display:"none" }}
+                />
+                <span style={{
+                  width:16,
+                  height:16,
+                  borderRadius:4,
+                  border:`1px solid ${focused === "pass" ? "#6366f1" : "#475569"}`,
+                  background: rememberMe ? "#6366f1" : "transparent",
+                  marginRight:6,
+                  transition:"background .2s",
+                  display:"flex",
+                  alignItems:"center",
+                  justifyContent:"center",
+                  color:"#fff",
+                }}>
+                  {rememberMe && <Check size={12} strokeWidth={3} />}
+                </span>
+                <span style={{ fontSize:12, cursor:"pointer" }}>Se souvenir de moi</span>
+              </label>
+            </div>
           </div>
 
         </div>

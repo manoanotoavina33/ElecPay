@@ -1,10 +1,11 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import LoginScreen from './components/LoginScreen';
 import AdminDashboard from './components/AdminDashboard';
 import ClientDashboard from './components/ClientDashboard';
 import { requestForToken, onMessageListener } from './utils/messaging';
 import { db } from './config/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
+import { ThemeProvider } from './context/ThemeContext';
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -28,12 +29,17 @@ export default function App() {
   }, [session]);
 
   if (!session) {
-    return <LoginScreen onLogin={setSession} />;
+    return <ThemeProvider><LoginScreen onLogin={setSession} /></ThemeProvider>;
   }
+
+  const handleLogout = () => {
+    localStorage.removeItem('elecpay_user');
+    setSession(null);
+  };
 
   if (session.role === 'admin') {
-    return <AdminDashboard onLogout={() => setSession(null)} />;
+    return <ThemeProvider><AdminDashboard onLogout={handleLogout} /></ThemeProvider>;
   }
 
-  return <ClientDashboard user={session} onLogout={() => setSession(null)} />;
+  return <ThemeProvider><ClientDashboard user={session} onLogout={handleLogout} /></ThemeProvider>;
 }

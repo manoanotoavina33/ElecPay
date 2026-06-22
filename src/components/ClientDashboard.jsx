@@ -1,43 +1,24 @@
-﻿import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import {
   Zap, User, LogOut, History, Building2, Phone,
   Calendar, DollarSign, Home, AlertTriangle, ShieldCheck,
-  Menu, CheckCircle, X
+  Menu, CheckCircle, X, Sun, Moon
 } from "lucide-react";
 import { db } from "../config/firebase";
 import { Badge, Spinner } from "./Common";
 import { CURRENT_MONTH, fmt, getRecentMonths } from "../utils/helpers";
+import { useTheme } from "../context/ThemeContext";
 
 /* ————————————————————————————————————————
    DARK THEME TOKENS
 ———————————————————————————————————————— */
-const T = {
-  bg0:    "#07080d",
-  bg1:    "#0d0f1a",
-  bg2:    "#12152a",
-  bg3:    "#1a1f38",
-  bg4:    "#222848",
-  border: "rgba(99,120,255,0.12)",
-  borderHover: "rgba(99,120,255,0.28)",
-  accent: "#5b6ef5",
-  accentGlow: "rgba(91,110,245,0.35)",
-  accentSoft: "rgba(91,110,245,0.12)",
-  text0:  "#f0f2ff",
-  text1:  "#9ba3c4",
-  text2:  "#5c6380",
-  success:"#3ecf8e",
-  successSoft: "rgba(62,207,142,0.12)",
-  danger: "#f87171",
-  dangerSoft: "rgba(248,113,113,0.12)",
-  warn:   "#fbbf24",
-  warnSoft: "rgba(251,191,36,0.1)",
-};
+// T est fourni dynamiquement par ThemeContext via useTheme()
 
 /* ————————————————————————————————————————
    STYLES
 ———————————————————————————————————————— */
-const S = {
+const makeClientS = (T) => ({
   appWrap: {
     display: "flex", minHeight: "100vh",
     background: T.bg0, fontFamily: "'DM Sans', system-ui, sans-serif",
@@ -261,7 +242,7 @@ const S = {
     fontSize: 10, fontWeight: active ? 700 : 500,
     transition: "color 0.18s",
   }),
-};
+});
 
 /* ————————————————————————————————————————
    ANIMATIONS (injected once)
@@ -330,16 +311,27 @@ const CSS_ANIM = `
 `;
 
 function DarkBadge({ statut }) {
+  const { T } = useTheme();
   const ok = statut === "payé";
+  const color = ok ? T.success : T.danger;
+  const bg = ok ? T.successSoft : T.dangerSoft;
   return (
-    <span style={S.badge(ok)}>
-      <span style={{ width: 5, height: 5, borderRadius: "50%", background: ok ? T.success : T.danger }} />      
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 5,
+      padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700,
+      background: bg, color,
+      border: `1px solid ${ok ? "rgba(62,207,142,0.2)" : "rgba(248,113,113,0.2)"}`,
+      letterSpacing: "0.04em",
+    }}>
+      <span style={{ width: 5, height: 5, borderRadius: "50%", background: ok ? T.success : T.danger }} />
       {ok ? "Payé" : "En attente"}
     </span>
   );
 }
 
 export default function ClientDashboard({ user, onLogout }) {
+  const { isDark, toggleTheme, T } = useTheme();
+  const S = makeClientS(T);
   const [tenants,     setTenants]     = useState([]);
   const [payments,    setPayments]    = useState([]);
   const [allPayments, setAllPayments] = useState([]);
@@ -365,6 +357,14 @@ export default function ClientDashboard({ user, onLogout }) {
       document.head.appendChild(s);
     }
   }, []);
+
+  useEffect(() => {
+    let st = document.getElementById('theme-autofill-client');
+    if (!st) { st = document.createElement('style'); st.id = 'theme-autofill-client'; document.head.appendChild(st); }
+    st.textContent = isDark
+      ? `select option{background:#0d0f1a;color:#f0f2ff;}`
+      : `select option{background:#fff;color:#0d0f1a;}`;
+  }, [isDark]);
 
   /* Data load */
   useEffect(() => {
@@ -483,7 +483,25 @@ export default function ClientDashboard({ user, onLogout }) {
               <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={S.monthSel}>{getRecentMonths().map(m => <option key={m} value={m}>{m}</option>)}</select>
             </div>
           </div>
-          <DarkBadge statut={me.statut} />
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <button
+              onClick={toggleTheme}
+              title={isDark ? "Passer en mode clair" : "Passer en mode sombre"}
+              style={{
+                display:"flex", alignItems:"center", gap:6,
+                padding: isMobile ? "7px 10px" : "8px 14px", borderRadius:9,
+                border:`1px solid ${T.border}`,
+                background: isDark ? "rgba(255,255,255,0.05)" : T.accentSoft,
+                color:T.accent, fontSize:13, fontWeight:700, cursor:"pointer",
+                fontFamily:"inherit", transition:"all .2s", flexShrink:0,
+                boxShadow: isDark ? "none" : `0 1px 6px ${T.accentGlow}`,
+              }}
+            >
+              {isDark ? <Sun size={15}/> : <Moon size={15}/>}
+              {!isMobile && <span style={{marginLeft:2}}>{isDark ? "Clair" : "Sombre"}</span>}
+            </button>
+            <DarkBadge statut={me.statut} />
+          </div>
         </header>
         <div style={{ ...S.content, padding: isMobile ? "16px 14px 90px" : "24px 28px" }}>
           {loading ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200 }}><Spinner /></div> : (

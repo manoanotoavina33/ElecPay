@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   collection, getDocs, addDoc, updateDoc,
   deleteDoc, doc, query, where
@@ -8,34 +8,14 @@ import {
   CheckCircle, XCircle, DollarSign, Plus,
   Pencil, Trash2, Send, ShieldCheck, Home, Phone, Menu, X,
   Search, RefreshCw, User, AlertTriangle, ChevronRight, Lock, Calendar,
-  Eye, EyeOff
+  Eye, EyeOff, Sun, Moon
 } from "lucide-react";
 import { db, functions } from "../config/firebase";
 import { httpsCallable } from "firebase/functions";
 import { Badge, Spinner } from "./Common";
 import { CURRENT_MONTH, fmt, getRecentMonths } from "../utils/helpers";
-const T = {
-  bg0:         "#07080d",
-  bg1:         "#0d0f1a",
-  bg2:         "#12152a",
-  bg3:         "#1a1f38",
-  bg4:         "#222848",
-  border:      "rgba(99,120,255,0.12)",
-  borderHover: "rgba(99,120,255,0.28)",
-  accent:      "#5b6ef5",
-  accentGlow:  "rgba(91,110,245,0.35)",
-  accentSoft:  "rgba(91,110,245,0.12)",
-  text0:       "#fff",
-  text1:       "#9ba3c4",
-  text2:       "#5c6380",
-  text3:       "#333333",
-  success:     "#3ecf8e",
-  successSoft: "rgba(62,207,142,0.12)",
-  danger:      "#f87171",
-  dangerSoft:  "rgba(248,113,113,0.12)",
-  warn:        "#fbbf24",
-  warnSoft:    "rgba(251,191,36,0.1)",
-};
+import { useTheme } from "../context/ThemeContext";
+// T est fourni dynamiquement par ThemeContext via useTheme()
 
 const CSS_ANIM = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
@@ -84,7 +64,7 @@ const CSS_ANIM = `
   }
 `;
 
-const S = {
+const makeS = (T, isDark) => ({
   appWrap: {
     display:"flex", minHeight:"100vh",
     background:T.bg0, fontFamily:"'DM Sans',system-ui,sans-serif",
@@ -190,7 +170,8 @@ const S = {
   refreshBtn: {
     display:"flex", alignItems:"center", gap:6,
     padding:"8px 14px", borderRadius:9,
-    border:`1px solid ${T.border}`, background:"rgba(255,255,255,0.04)",
+    border:`1px solid ${T.border}`,
+    background: isDark ? "rgba(255,255,255,0.04)" : "#ffffff",
     color:T.text1, fontSize:13, fontWeight:600, cursor:"pointer",
     fontFamily:"inherit", transition:"all .15s",
   },
@@ -290,7 +271,8 @@ const S = {
   btnOutline: {
     display:"inline-flex", alignItems:"center", gap:7,
     padding:"9px 18px", borderRadius:9,
-    border:`1.5px solid ${T.border}`, background:"rgba(255,255,255,0.03)",
+    border:`1.5px solid ${T.border}`,
+    background: isDark ? T.bg1 : "#ffffff",
     color:T.text1, fontWeight:600, fontSize:13, cursor:"pointer",
     fontFamily:"inherit",
   },
@@ -301,12 +283,15 @@ const S = {
     marginBottom:14,
   },
   searchInput: {
-    padding:"9px 12px 9px 34px", borderRadius:9,
-    border:`1.5px solid ${T.border}`, background:"rgba(255,255,255,0.04)",
-    fontSize:13, color:"#00004d", outline:"none",
+    padding:"9px 12px 9px 34px",
+    borderRadius:9,
+    border:`1.5px solid ${T.border}`,
+    background: isDark ? T.bg2 : "#ffffff",
+    fontSize:13, color: `${T.text0} !important`, outline:"none",
     transition:"border-color .2s", fontFamily:"inherit",
-    WebkitTextFillColor: "#000000",
-    colorScheme:"dark",
+    caretColor: T.text0,
+    WebkitTextFillColor: `${T.text0} !important`,
+    colorScheme: isDark ? "dark" : "light",
   },
   overlay: {
     position:"fixed", inset:0, background:"rgba(0,0,0,0.65)",
@@ -315,9 +300,9 @@ const S = {
   },
   modalCard: {
     background:T.bg2, borderRadius:18, padding:"28px 30px",
-    width:420, boxShadow:"0 24px 60px rgba(0,0,0,0.6)",
+    width:420, boxShadow:isDark ? "0 24px 60px rgba(0,0,0,0.8)" : "0 24px 60px rgba(0,0,0,0.6)",
     maxHeight:"90vh", overflowY:"auto",
-    border:`1px solid rgba(91,110,245,0.25)`,
+    border:`1px solid ${T.border}`,
   },
   modalTitle: { margin:0, fontSize:18, fontWeight:800, color:T.text0 },
   label: {
@@ -325,17 +310,23 @@ const S = {
     marginBottom:6, textTransform:"uppercase", letterSpacing:.5,
   },
   modalInput: {
-    width:"100%", padding:"10px 12px 10px 38px",
-    borderRadius:9, border:`1.5px solid ${T.border}`,
-    fontSize:13, color:"#e8eaf6", outline:"none",
-    boxSizing:"border-box", background:"#1a1f38",
-    transition:"border-color .15s", fontFamily:"inherit",
-    WebkitTextFillColor:"#00001a",
-    colorScheme:"dark",
+    width:"100%",
+    padding:"10px 12px 10px 38px",
+    borderRadius:9,
+    border:`1.5px solid ${T.border}`,
+    background: isDark ? T.bg2 : "#ffffff",
+    fontSize:13,
+    color: `${T.text0} !important`,
+    outline:"none",
+    transition:"border-color .2s",
+    fontFamily:"inherit",
+    caretColor: T.text0,
+    WebkitTextFillColor: `${T.text0} !important`,
+    colorScheme: isDark ? "dark" : "light",
   },
   notifCard: {
     background:T.bg2, borderRadius:16, padding:"28px",
-    border:`1px solid ${T.border}`, textAlign:"center",
+    border:`1px solid ${T.border}`, textAlign:"center"
   },
   notifIconWrap: {
     width:60, height:60, borderRadius:16,
@@ -344,7 +335,8 @@ const S = {
   },
   notifRow: {
     display:"flex", justifyContent:"space-between", alignItems:"center",
-    padding:"12px 14px", background:"rgba(255,255,255,0.03)",
+    padding:"12px 14px",
+    background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
     borderRadius:10, marginBottom:8, border:`1px solid ${T.border}`,
   },
   notifSuccess: {
@@ -385,9 +377,10 @@ const S = {
   },
   mobLabel: { fontSize:11, color:T.text2, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.07em" },
   mobVal:   { fontSize:13, fontWeight:500, color:T.text0 },
-};
+});
 
 function DarkBadge({ statut }) {
+  const { T } = useTheme();
   const ok  = statut === "payé";
   const mid = statut === "retard";
   const color = ok ? T.success : mid ? T.warn : T.danger;
@@ -408,7 +401,54 @@ function DarkBadge({ statut }) {
 
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString("fr-FR") : "—";
 
+function Toast({ message, onClose }) {
+  const { T, isDark } = useTheme();
+  
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div className="fade-up" style={{
+      position: "fixed",
+      top: 24,
+      right: 24,
+      zIndex: 9999,
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      padding: "12px 18px",
+      borderRadius: 12,
+      background: T.bg1,
+      border: `1px solid ${T.success}`,
+      boxShadow: isDark ? "0 12px 32px rgba(0,0,0,0.5)" : "0 12px 32px rgba(91,110,245,0.15)",
+      color: T.text0,
+      fontFamily: "'DM Sans', system-ui, sans-serif",
+      fontSize: 14,
+      fontWeight: 600,
+    }}>
+      <CheckCircle size={18} color={T.success} />
+      <span>{message}</span>
+      <button onClick={onClose} style={{
+        background: "none",
+        border: "none",
+        color: T.text1,
+        cursor: "pointer",
+        padding: 0,
+        marginLeft: 8,
+        display: "flex",
+        alignItems: "center",
+      }}>
+        <X size={14} />
+      </button>
+    </div>
+  );
+}
+
 export default function AdminDashboard({ onLogout }) {
+  const { isDark, toggleTheme, T } = useTheme();
+  const S = makeS(T, isDark);
   const [tenants,      setTenants]      = useState([]);
   const [payments,     setPayments]     = useState([]);
   const [tab,          setTab]          = useState("dashboard");
@@ -423,6 +463,9 @@ export default function AdminDashboard({ onLogout }) {
   const [focusedInput, setFocusedInput] = useState(null);
   // ── NOUVEAU : toggle visibilité mot de passe ──
   const [showPassword, setShowPassword] = useState(false);
+  const [selectedTenant, setSelectedTenant] = useState(null);
+  const [customMessage, setCustomMessage] = useState("");
+  const [toast,         setToast]        = useState(null);
 
   useEffect(() => {
     const id = "elecpay-admin-css";
@@ -432,6 +475,14 @@ export default function AdminDashboard({ onLogout }) {
       document.head.appendChild(s);
     }
   }, []);
+
+  useEffect(() => {
+    let st = document.getElementById('theme-autofill');
+    if (!st) { st = document.createElement('style'); st.id = 'theme-autofill'; document.head.appendChild(st); }
+    st.textContent = isDark
+      ? `input:-webkit-autofill,input:-webkit-autofill:focus{-webkit-box-shadow:0 0 0 999px #12152a inset !important;-webkit-text-fill-color:#f0f2ff !important;}select option{background:#0d0f1a;color:#f0f2ff;}`
+      : `input:-webkit-autofill,input:-webkit-autofill:focus{-webkit-box-shadow:0 0 0 999px #fff inset !important;-webkit-text-fill-color:#0d0f1a !important;}select option{background:#fff;color:#0d0f1a;}`;
+  }, [isDark]);
 
   useEffect(() => {
     const onResize = () => {
@@ -487,10 +538,12 @@ export default function AdminDashboard({ onLogout }) {
       if (form.id) {
         const {id, ...data} = form;
         await updateDoc(doc(db,"clients",id), data);
+        setToast({ message: "Locataire modifié avec succès !" });
       } else {
         await addDoc(collection(db,"clients"), {
           ...form, statut:"non payé", datePaiement:null, mois:CURRENT_MONTH,
         });
+        setToast({ message: "Locataire ajouté avec succès !" });
       }
       await loadAll();
     } catch(e) { console.error(e); }
@@ -503,6 +556,7 @@ export default function AdminDashboard({ onLogout }) {
       await deleteDoc(doc(db,"clients",id));
       const snap = await getDocs(query(collection(db,"paiements"), where("clientId","==",id)));
       await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+      setToast({ message: "Locataire supprimé avec succès !" });
       await loadAll();
     } catch(e) { console.error(e); }
   };
@@ -517,6 +571,7 @@ export default function AdminDashboard({ onLogout }) {
           clientId:tenantId, montant:tenant.montant, date:today, mois:selMois, statut:"payé",
         });
       }
+      setToast({ message: "Paiement encaissé avec succès !" });
       await loadAll();
     } catch(e) { console.error(e); }
   };
@@ -723,6 +778,22 @@ export default function AdminDashboard({ onLogout }) {
             </div>
           </div>
           <div style={S.headerRight}>
+            <button
+              onClick={toggleTheme}
+              title={isDark ? "Passer en mode clair" : "Passer en mode sombre"}
+              style={{
+                display:"flex", alignItems:"center", gap:6,
+                padding: isMobile ? "7px 10px" : "8px 14px", borderRadius:9,
+                border:`1px solid ${T.border}`,
+                background: isDark ? "rgba(255,255,255,0.05)" : T.accentSoft,
+                color:T.accent, fontSize:13, fontWeight:700, cursor:"pointer",
+                fontFamily:"inherit", transition:"all .2s", flexShrink:0,
+                boxShadow: isDark ? "none" : `0 1px 6px ${T.accentGlow}`,
+              }}
+            >
+              {isDark ? <Sun size={15}/> : <Moon size={15}/>}
+              {!isMobile && <span style={{marginLeft:2}}>{isDark ? "Clair" : "Sombre"}</span>}
+            </button>
             <button onClick={loadAll} style={S.refreshBtn}>
               <RefreshCw size={14}/>{!isMobile && " Actualiser"}
             </button>
@@ -867,11 +938,13 @@ export default function AdminDashboard({ onLogout }) {
                   <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16, flexWrap:"wrap", gap:10}}>
                     <div style={{position:"relative", flex: isMobile ? 1 : undefined}}>
                       <Search size={14} style={{position:"absolute", left:11, top:"50%", transform:"translateY(-50%)", color:T.text2, pointerEvents:"none"}}/>
-                      <input
+                                            <input
                         placeholder="Rechercher…"
                         value={search}
                         onChange={e => setSearch(e.target.value)}
-                        style={{...S.searchInput, width: isMobile ? "100%" : 220, boxSizing:"border-box"}}
+                        onFocus={() => setFocusedInput('search')}
+                        onBlur={() => setFocusedInput(null)}
+                        style={{...S.searchInput, width: isMobile ? "100%" : 220, boxSizing:"border-box", color: focusedInput === 'search' ? T.accent : T.text0}}
                       />
                     </div>
                     <button onClick={() => openModal("tenant")} style={S.btnPrimary}>
@@ -975,54 +1048,103 @@ export default function AdminDashboard({ onLogout }) {
               )}
 
               {tab === "notifs" && (
-                <div style={{maxWidth:520, margin:"0 auto"}} className="fade-up">
-                  <div style={{...S.notifCard, textAlign:"center"}}>
-                    <div style={{...S.notifIconWrap, margin:"0 auto 18px"}}>
-                      <Bell size={28} color={T.accent}/>
-                    </div>
-                    <h3 style={{fontSize:20, fontWeight:800, color:T.text0, margin:"0 0 8px"}}>
-                      Rappels de paiement
-                    </h3>
-                    <p style={{color:T.text1, marginBottom:24, fontSize:14, lineHeight:1.6}}>
-                      Notifier les locataires n'ayant pas encore payé pour{" "}
-                      <strong style={{color:T.accent}}>{selMois}</strong>.
-                    </p>
-                    {tenants.filter(t => !(t.statut === "payé" && t.mois === selMois)).length===0 ? (
-                      <div style={{padding:"20px 0", color:T.success, fontWeight:700}}>
-                        <CheckCircle size={20} style={{verticalAlign:"middle", marginRight:6}}/>
-                        Tous les locataires ont payé !
-                      </div>
-                    ) : (
-                      <>
-                        <div style={{marginBottom:20, textAlign:"left"}}>
-                          {tenants.filter(t => !(t.statut === "payé" && t.mois === selMois)).map(t => (
-                            <div key={t.id} style={S.notifRow}>
-                              <div style={{display:"flex", alignItems:"center", gap:10}}>
-                                <div style={S.avatar(32,9)}>{t.nom?.[0]}</div>
-                                <div>
-                                  <div style={{fontWeight:600, fontSize:14, color:T.text0}}>{t.nom}</div>
-                                  <div style={{fontSize:12, color:T.text2}}>{t.logement}</div>
-                                </div>
-                              </div>
-                              <DarkBadge statut={effectiveStatut(t)}/>
-                            </div>
-                          ))}
-                        </div>
-                        <button
-                          onClick={async () => { try { const sendReminders = httpsCallable(functions, "sendManualReminders"); await sendReminders({ mois: selMois }); setNotifSent(true); setTimeout(() => setNotifSent(false), 4000); } catch (error) { console.error("Erreur d'envoi des rappels:", error); alert("Erreur lors de l'envoi des rappels: " + (error.message || error.code || "Erreur inconnue")); console.error("DÃ©tails erreur:", error); } }}
-                          style={{...S.btnPrimary, width:"100%", justifyContent:"center", padding:"13px"}}>
-                          <Send size={16}/> Envoyer les rappels
-                        </button>
-                        {notifSent && (
-                          <div style={S.notifSuccess}>
-                            <CheckCircle size={16}/> Rappels envoyés avec succès !
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
+        <div style={{maxWidth:520, margin:"0 auto"}} className="fade-up">
+          <div style={{...S.notifCard, textAlign:"center"}}>
+            <div style={{...S.notifIconWrap, margin:"0 auto 18px"}}>
+              <Bell size={28} color={T.accent}/>
+            </div>
+            <h3 style={{fontSize:20, fontWeight:800, color:T.text0, margin:"0 0 8px"}}>
+              Rappels de paiement
+            </h3>
+            <p style={{color:T.text1, marginBottom:24, fontSize:14, lineHeight:1.6}}>
+              Notifier les locataires n'ayant pas encore payé pour <strong style={{color:T.accent}}>{selMois}</strong>.
+            </p>
+
+            {selectedTenant ? (
+              <>
+                <div style={{marginBottom:12, textAlign:"left"}}>
+                  <label style={S.label}>Message personnalisé</label>
+                  <textarea
+                    value={customMessage}
+                    onChange={e => setCustomMessage(e.target.value)}
+                    placeholder="Entrez le texte du rappel..."
+                    rows={5}
+                    style={{
+                      width: "100%",
+                      minHeight: "120px",
+                      padding: "12px",
+                      borderRadius: 8,
+                      border: `1.5px solid ${T.border}`,
+                      background: isDark ? T.bg2 : "#fff",
+                      color: T.text0,
+                      resize: "vertical",
+                    }}
+                  />
                 </div>
-              )}
+                <button
+                  onClick={async () => {
+                    try {
+                      const sendReminders = httpsCallable(functions, "sendManualReminders");
+                      await sendReminders({ mois: selMois, tenantId: selectedTenant.id, message: customMessage });
+                      setNotifSent(true);
+                      setTimeout(() => setNotifSent(false), 4000);
+                      setSelectedTenant(null);
+                      setCustomMessage("");
+                    } catch (error) {
+                      console.error("Erreur d'envoi des rappels:", error);
+                      alert("Erreur lors de l'envoi des rappels: " + (error.message || error.code || "Erreur inconnue"));
+                    }
+                  }}
+                  style={{
+                    ...S.btnPrimary,
+                    width: "100%",
+                    justifyContent: "center",
+                    padding: "14px",
+                    fontSize: "16px",
+                  }}>
+                  <Send size={16} /> Envoyer le rappel
+                </button>
+              </>
+            ) : (
+              <>
+                {tenants.filter(t => !(t.statut === "payé" && t.mois === selMois)).length === 0 ? (
+                  <div style={{padding:"20px 0", color:T.success, fontWeight:700}}>
+                    <CheckCircle size={20} style={{verticalAlign:"middle", marginRight:6}}/>
+                    Tous les locataires ont payé !
+                  </div>
+                ) : (
+                  <div>
+                    {tenants.filter(t => !(t.statut === "payé" && t.mois === selMois)).map(t => (
+                      <div key={t.id} style={S.notifRow}>
+                        <div style={{display:"flex", alignItems:"center", gap:10}}>
+                          <div style={S.avatar(32,9)}>{t.nom?.[0]}</div>
+                          <div>
+                            <div style={{fontWeight:600, fontSize:14, color:T.text0}}>{t.nom}</div>
+                            <div style={{fontSize:12, color:T.text2}}>{t.logement}</div>
+                          </div>
+                        </div>
+                        <DarkBadge statut={effectiveStatut(t)}/>
+                        <button
+                          onClick={() => {
+                            setSelectedTenant(t);
+                            setCustomMessage(`Bonjour ${t.nom},\n\nVotre paiement pour ${selMois} est en retard. Merci de régulariser votre situation.`);
+                          }}
+                          style={{...S.btnSmallBlue, marginLeft:8}}
+                        >Notifier</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+            {notifSent && (
+              <div style={S.notifSuccess}>
+                <CheckCircle size={16}/> Rappels envoyés avec succès !
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
             </>
           )}
@@ -1086,6 +1208,7 @@ export default function AdminDashboard({ onLogout }) {
                         ...S.modalInput,
                         // padding-right élargi pour le champ password (place pour l'icône eye)
                         paddingRight: isPassword ? 38 : 12,
+                        color: focusedInput===f.key ? T.accent : T.text0,
                         ...(focusedInput===f.key
                           ? {borderColor:T.accent, boxShadow:`0 0 0 3px ${T.accentSoft}`}
                           : {}),
@@ -1129,6 +1252,12 @@ export default function AdminDashboard({ onLogout }) {
             </div>
           </div>
         </div>
+      )}
+      {toast && (
+        <Toast
+          message={toast.message}
+          onClose={() => setToast(null)}
+        />
       )}
     </div>
   );
